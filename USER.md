@@ -6,7 +6,8 @@
 - **What to call them:** David
 - **Pronouns:** *(unknown)*
 - **Timezone:** *(unknown - to learn)*
-- **Notes:** Set me up on WhatsApp. Named me Luke. Building HomeschoolDesk SaaS (homeschool planning platform). 
+- **Notes:** Set me up on WhatsApp. Named me Luke. Building HomeschoolDesk SaaS (homeschool planning platform).
+- **Email:** dgonzalez1992@gmail.com 
 
 ## Context
 
