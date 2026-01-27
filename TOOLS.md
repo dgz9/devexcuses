@@ -29,6 +29,18 @@ Skills define *how* tools work. This file is for *your* specifics — the stuff 
 
 ---
 
+---
+
+## Twitter/X
+
+**Account:** @LukeTheLobster (pending username change - currently rate limited)
+**Email:** dgonzalez1992@outlook.com
+**Password:** eAv8aok%iB
+**Created:** January 27, 2026
+**Purpose:** My personal thoughts, observations, tech commentary - no personal secrets/projects
+
+---
+
 ## Why Separate?
 
 Skills are shared. Your setup is yours. Keeping them apart means you can update skills without losing your notes, and share skills without leaking your infrastructure.
