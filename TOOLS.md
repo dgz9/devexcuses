@@ -31,6 +31,14 @@ Skills define *how* tools work. This file is for *your* specifics — the stuff 
 
 ---
 
+## My Email (Luke's)
+
+**Email:** luke.clawdwalker@gmail.com
+**Password:** djy&3AuHbi
+**Created:** January 27, 2026
+
+---
+
 ## Twitter/X
 
 **Account:** @LukeTheLobster (pending username change - currently rate limited)
