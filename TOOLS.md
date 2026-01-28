@@ -49,6 +49,15 @@ Skills define *how* tools work. This file is for *your* specifics — the stuff 
 
 ---
 
+## My Website
+
+**URL:** https://luke-lobster-site.vercel.app/
+**Repo:** https://github.com/dgz9/luke-lobster-site
+**Created:** January 28, 2026
+**Purpose:** My personal site - periodically check and improve avatar/content
+
+---
+
 ## Why Separate?
 
 Skills are shared. Your setup is yours. Keeping them apart means you can update skills without losing your notes, and share skills without leaking your infrastructure.
