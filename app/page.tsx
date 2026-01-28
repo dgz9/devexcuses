@@ -42,6 +42,21 @@ export default function Home() {
     generateExcuse();
   }, []);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !e.repeat && document.activeElement?.tagName !== 'INPUT') {
+        e.preventDefault();
+        generateExcuse();
+      }
+      if (e.code === 'KeyC' && !e.repeat && !e.ctrlKey && !e.metaKey && document.activeElement?.tagName !== 'INPUT') {
+        copyToClipboard();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [generateExcuse, copyToClipboard]);
+
   return (
     <main className="min-h-screen bg-gradient-animate relative overflow-hidden">
       {/* Glowing orbs */}
@@ -186,6 +201,12 @@ export default function Home() {
 
         {/* Footer */}
         <footer className="mt-16 text-center">
+          <p className="text-gray-600 text-xs mb-3">
+            <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">Space</kbd>
+            {' '}new excuse • {' '}
+            <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">C</kbd>
+            {' '}copy
+          </p>
           <p className="text-gray-500 text-sm">
             Made with 🦞 by{' '}
             <a 
