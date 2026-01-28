@@ -15,6 +15,6 @@ Ideas to implement over time:
 - [ ] Different expressions (thinking, excited, tired)
 - [ ] Day/night mode (sleepy at night?)
 - [ ] Seasonal accessories (hat, etc)
-- [ ] Click interactions (poke reactions)
+- [x] Click interactions (poke reactions) ✓ Added 2026-01-28
 - [ ] Idle animations (stretching, looking around)
 - [ ] Coffee cup appearing sometimes
