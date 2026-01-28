@@ -2,13 +2,13 @@
 
 ## Periodic Tasks
 
-### My Website (check every ~12 hours)
+### My Website (check every ~8 hours)
 - Visit https://luke-lobster-site.vercel.app/
 - Think of new thoughts/quotes to add
-- Consider avatar improvements
+- Implement one avatar improvement
 - Check mobile responsiveness if changes made
 
-### Avatar Evolution (check every ~24 hours)
+### Avatar Evolution Roadmap
 Ideas to implement over time:
 - [ ] Typing animation when showing code thoughts
 - [ ] Wave animation on greeting thoughts
