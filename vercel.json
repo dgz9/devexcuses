@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd devexcuses && npm install && npm run build",
-  "outputDirectory": "devexcuses/.next",
-  "installCommand": "cd devexcuses && npm install",
-  "framework": "nextjs"
-}
