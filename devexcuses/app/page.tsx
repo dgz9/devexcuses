@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { getRandomExcuse, categories, type Category, type Excuse } from '@/lib/excuses';
 
 export default function Home() {
@@ -8,21 +8,22 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<Category | undefined>(undefined);
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [animateEmoji, setAnimateEmoji] = useState(false);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
-    // Small delay for visual feedback
+    setAnimateEmoji(true);
     setTimeout(() => {
       setExcuse(getRandomExcuse(selectedCategory));
       setIsGenerating(false);
-      setCopied(false);
-    }, 150);
+      setTimeout(() => setAnimateEmoji(false), 600);
+    }, 200);
   }, [selectedCategory]);
 
   const copyToClipboard = useCallback(async () => {
     if (!excuse) return;
     try {
-      await navigator.clipboard.writeText(excuse.text);
+      await navigator.clipboard.writeText(`"${excuse.text}" ${excuse.emoji}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -32,108 +33,182 @@ export default function Home() {
 
   const shareToTwitter = useCallback(() => {
     if (!excuse) return;
-    const text = encodeURIComponent(`"${excuse.text}" ${excuse.emoji}\n\n— devexcuses.vercel.app`);
+    const text = encodeURIComponent(`"${excuse.text}" ${excuse.emoji}\n\nvia devexcuses.vercel.app`);
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   }, [excuse]);
 
-  return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
-      {/* Header */}
-      <div className="text-center mb-8 sm:mb-12">
-        <h1 className="text-4xl sm:text-6xl font-bold mb-4">
-          <span className="gradient-text">DevExcuses</span>
-        </h1>
-        <p className="text-gray-400 text-lg sm:text-xl max-w-md mx-auto">
-          Why is the build broken? We've got you covered.
-        </p>
-      </div>
+  // Generate on first load
+  useEffect(() => {
+    generateExcuse();
+  }, []);
 
-      {/* Category Filter */}
-      <div className="flex flex-wrap justify-center gap-2 mb-8">
-        <button
-          onClick={() => setSelectedCategory(undefined)}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-            !selectedCategory
-              ? 'bg-purple-600 text-white'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-          }`}
-        >
-          🎲 All
-        </button>
-        {categories.map((cat) => (
+  return (
+    <main className="min-h-screen bg-gradient-animate relative overflow-hidden">
+      {/* Glowing orbs */}
+      <div className="orb orb-1" />
+      <div className="orb orb-2" />
+      
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-6">
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-sm text-gray-400">70+ excuses and counting</span>
+          </div>
+          
+          <h1 className="text-5xl sm:text-7xl font-bold mb-4 tracking-tight">
+            <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
+              Dev
+            </span>
+            <span className="text-white">Excuses</span>
+          </h1>
+          
+          <p className="text-gray-400 text-lg sm:text-xl max-w-md mx-auto">
+            The perfect excuse for every <span className="text-violet-400">broken build</span>
+          </p>
+        </div>
+
+        {/* Category Pills */}
+        <div className="flex flex-wrap justify-center gap-2 mb-8 max-w-2xl">
           <button
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              selectedCategory === cat.id
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            onClick={() => { setSelectedCategory(undefined); generateExcuse(); }}
+            className={`pill px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              !selectedCategory
+                ? 'pill-active text-white'
+                : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
             }`}
           >
-            {cat.emoji} {cat.label}
+            🎲 All
           </button>
-        ))}
-      </div>
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => { setSelectedCategory(cat.id); }}
+              className={`pill px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                selectedCategory === cat.id
+                  ? 'pill-active text-white'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              {cat.emoji} {cat.label}
+            </button>
+          ))}
+        </div>
 
-      {/* Excuse Display */}
-      <div className="w-full max-w-2xl mb-8">
-        {excuse ? (
-          <div className="excuse-card bg-gray-800/50 backdrop-blur border border-gray-700 rounded-2xl p-8 text-center">
-            <span className="text-5xl mb-4 block">{excuse.emoji}</span>
-            <p className="text-2xl sm:text-3xl font-medium text-white mb-4">
-              "{excuse.text}"
-            </p>
-            <span className="inline-block px-3 py-1 bg-gray-700 rounded-full text-sm text-gray-300">
-              {categories.find(c => c.id === excuse.category)?.emoji}{' '}
-              {categories.find(c => c.id === excuse.category)?.label}
-            </span>
-          </div>
-        ) : (
-          <div className="bg-gray-800/30 border border-gray-700/50 border-dashed rounded-2xl p-12 text-center">
-            <span className="text-5xl mb-4 block">🎰</span>
-            <p className="text-gray-500 text-xl">
-              Click the button to generate your excuse
-            </p>
+        {/* Excuse Card */}
+        <div className="w-full max-w-2xl mb-8">
+          {excuse ? (
+            <div 
+              key={excuse.text} 
+              className="glass-card rounded-3xl p-8 sm:p-12 text-center excuse-enter"
+            >
+              <span className={`text-6xl sm:text-7xl mb-6 block ${animateEmoji ? 'emoji-bounce' : ''}`}>
+                {excuse.emoji}
+              </span>
+              
+              <p className="text-2xl sm:text-3xl lg:text-4xl font-medium text-white mb-6 leading-tight">
+                "{excuse.text}"
+              </p>
+              
+              <div className="flex items-center justify-center gap-2">
+                <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${
+                  excuse.category === 'frontend' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                  excuse.category === 'backend' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                  excuse.category === 'devops' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
+                  excuse.category === 'management' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
+                  'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+                }`}>
+                  {categories.find(c => c.id === excuse.category)?.emoji}
+                  {categories.find(c => c.id === excuse.category)?.label}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="glass-card rounded-3xl p-12 text-center shimmer">
+              <span className="text-6xl mb-4 block opacity-30">🎰</span>
+              <p className="text-gray-500 text-xl">Loading...</p>
+            </div>
+          )}
+        </div>
+
+        {/* Generate Button */}
+        <button
+          onClick={generateExcuse}
+          disabled={isGenerating}
+          className="btn-primary text-white font-semibold py-4 px-10 rounded-2xl text-lg mb-8 disabled:opacity-50 disabled:cursor-not-allowed relative"
+        >
+          <span className="relative z-10 flex items-center gap-2">
+            {isGenerating ? (
+              <>
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Generating...
+              </>
+            ) : (
+              <>🎲 Another Excuse</>
+            )}
+          </span>
+        </button>
+
+        {/* Action Buttons */}
+        {excuse && (
+          <div className="flex gap-3 flex-wrap justify-center">
+            <button
+              onClick={copyToClipboard}
+              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
+                copied 
+                  ? 'bg-green-500/20 text-green-400 border border-green-500/30 copy-success' 
+                  : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              {copied ? (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Copied!
+                </>
+              ) : (
+                <>📋 Copy</>
+              )}
+            </button>
+            
+            <button
+              onClick={shareToTwitter}
+              className="flex items-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium text-gray-300 transition-all"
+            >
+              𝕏 Share
+            </button>
           </div>
         )}
+
+        {/* Footer */}
+        <footer className="mt-16 text-center">
+          <p className="text-gray-500 text-sm">
+            Made with 🦞 by{' '}
+            <a 
+              href="https://luke-lobster-site.vercel.app" 
+              className="text-violet-400 hover:text-violet-300 transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Luke
+            </a>
+          </p>
+          <p className="text-gray-600 text-xs mt-2">
+            <a 
+              href="https://github.com/dgz9/devexcuses" 
+              className="hover:text-gray-400 transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View on GitHub
+            </a>
+          </p>
+        </footer>
       </div>
-
-      {/* Generate Button */}
-      <button
-        onClick={generateExcuse}
-        disabled={isGenerating}
-        className="glow-button bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-4 px-8 rounded-xl text-xl mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isGenerating ? '🎲 Generating...' : excuse ? '🎲 Another One!' : '🎲 Generate Excuse'}
-      </button>
-
-      {/* Action Buttons */}
-      {excuse && (
-        <div className="flex gap-4 flex-wrap justify-center">
-          <button
-            onClick={copyToClipboard}
-            className={`flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-all ${
-              copied ? 'copied bg-green-600 hover:bg-green-600' : ''
-            }`}
-          >
-            {copied ? '✓ Copied!' : '📋 Copy'}
-          </button>
-          <button
-            onClick={shareToTwitter}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-all"
-          >
-            𝕏 Share
-          </button>
-        </div>
-      )}
-
-      {/* Footer */}
-      <footer className="mt-16 text-center text-gray-500 text-sm">
-        <p>Made with 🦞 by <a href="https://luke-lobster-site.vercel.app" className="text-purple-400 hover:text-purple-300">Luke</a></p>
-        <p className="mt-2">
-          70+ excuses and counting • <a href="https://github.com/dgz9/devexcuses" className="text-purple-400 hover:text-purple-300">Contribute on GitHub</a>
-        </p>
-      </footer>
     </main>
   );
 }
