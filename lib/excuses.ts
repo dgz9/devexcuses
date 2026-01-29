@@ -106,6 +106,28 @@ export function getRandomExcuse(category?: Category): Excuse {
   return filtered[Math.floor(Math.random() * filtered.length)];
 }
 
+// Daily Excuse - same excuse for everyone that day
+export function getDailyExcuse(): Excuse {
+  const today = new Date();
+  const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
+  const year = today.getFullYear();
+  // Use a simple hash to deterministically pick an excuse
+  const seed = dayOfYear * 31 + year;
+  const index = seed % excuses.length;
+  return excuses[index];
+}
+
+// Get the next excuse in line for tomorrow
+export function getTomorrowsExcuse(): Excuse {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dayOfYear = Math.floor((tomorrow.getTime() - new Date(tomorrow.getFullYear(), 0, 0).getTime()) / 86400000);
+  const year = tomorrow.getFullYear();
+  const seed = dayOfYear * 31 + year;
+  const index = seed % excuses.length;
+  return excuses[index];
+}
+
 export function getExcusesByCategory(category: Category): Excuse[] {
   return excuses.filter(e => e.category === category);
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { getRandomExcuse, categories, type Category, type Excuse } from '@/lib/excuses';
+import { getRandomExcuse, getDailyExcuse, categories, type Category, type Excuse } from '@/lib/excuses';
 
 export default function Home() {
   const [excuse, setExcuse] = useState<Excuse | null>(null);
@@ -9,6 +9,8 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [animateEmoji, setAnimateEmoji] = useState(false);
+  const [showDaily, setShowDaily] = useState(false);
+  const [dailyExcuse] = useState<Excuse>(() => getDailyExcuse());
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -66,9 +68,21 @@ export default function Home() {
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-6">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-sm text-gray-400">70+ excuses and counting</span>
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-sm text-gray-400">70+ excuses and counting</span>
+            </div>
+            <button
+              onClick={() => setShowDaily(!showDaily)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showDaily
+                  ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border border-amber-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              📅 {showDaily ? 'Hide Daily' : "Today's Excuse"}
+            </button>
           </div>
           
           <h1 className="text-5xl sm:text-7xl font-bold mb-4 tracking-tight">
@@ -82,6 +96,28 @@ export default function Home() {
             The perfect excuse for every <span className="text-violet-400">broken build</span>
           </p>
         </div>
+
+        {/* Daily Excuse Banner */}
+        {showDaily && (
+          <div className="w-full max-w-2xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold rounded-bl-lg">
+                📅 DAILY EXCUSE
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-4xl">{dailyExcuse.emoji}</span>
+                <div>
+                  <p className="text-lg sm:text-xl font-medium text-white">
+                    "{dailyExcuse.text}"
+                  </p>
+                  <p className="text-xs text-amber-400/70 mt-2">
+                    Same excuse for everyone today! Check back tomorrow for a new one.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Category Pills */}
         <div className="flex flex-wrap justify-center gap-2 mb-8 max-w-2xl">
