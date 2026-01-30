@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { getRandomExcuse, getDailyExcuse, categories, type Category, type Excuse } from '@/lib/excuses';
+import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, type Category, type Excuse } from '@/lib/excuses';
 
 export default function Home() {
   const [excuse, setExcuse] = useState<Excuse | null>(null);
@@ -161,7 +161,7 @@ export default function Home() {
                 "{excuse.text}"
               </p>
               
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${
                   excuse.category === 'frontend' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
                   excuse.category === 'backend' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
@@ -171,6 +171,14 @@ export default function Home() {
                 }`}>
                   {categories.find(c => c.id === excuse.category)?.emoji}
                   {categories.find(c => c.id === excuse.category)?.label}
+                </span>
+                <span className={`inline-flex items-center gap-1 px-3 py-2 rounded-full text-sm ${
+                  excuse.spice >= 4 ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                  excuse.spice >= 3 ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
+                  'bg-green-500/10 text-green-400 border border-green-500/20'
+                }`} title={getSpiceLabel(excuse.spice)}>
+                  {'🔥'.repeat(excuse.spice)}
+                  <span className="hidden sm:inline ml-1 text-xs opacity-75">{getSpiceLabel(excuse.spice)}</span>
                 </span>
               </div>
             </div>
