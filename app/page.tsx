@@ -3,6 +3,18 @@
 import { useState, useCallback, useEffect } from 'react';
 import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, type Category, type Excuse } from '@/lib/excuses';
 
+// Favorites helpers
+function getFavorites(): Excuse[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(localStorage.getItem('devexcuses-favorites') || '[]');
+  } catch { return []; }
+}
+
+function saveFavorites(favorites: Excuse[]) {
+  localStorage.setItem('devexcuses-favorites', JSON.stringify(favorites));
+}
+
 export default function Home() {
   const [excuse, setExcuse] = useState<Excuse | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | undefined>(undefined);
@@ -11,6 +23,9 @@ export default function Home() {
   const [animateEmoji, setAnimateEmoji] = useState(false);
   const [showDaily, setShowDaily] = useState(false);
   const [dailyExcuse] = useState<Excuse>(() => getDailyExcuse());
+  const [favorites, setFavorites] = useState<Excuse[]>([]);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [justFavorited, setJustFavorited] = useState(false);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -39,6 +54,31 @@ export default function Home() {
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   }, [excuse]);
 
+  // Load favorites from localStorage
+  useEffect(() => {
+    setFavorites(getFavorites());
+  }, []);
+
+  // Toggle favorite
+  const toggleFavorite = useCallback(() => {
+    if (!excuse) return;
+    setFavorites(prev => {
+      const exists = prev.some(f => f.text === excuse.text);
+      let updated: Excuse[];
+      if (exists) {
+        updated = prev.filter(f => f.text !== excuse.text);
+      } else {
+        updated = [...prev, excuse];
+        setJustFavorited(true);
+        setTimeout(() => setJustFavorited(false), 1000);
+      }
+      saveFavorites(updated);
+      return updated;
+    });
+  }, [excuse]);
+
+  const isFavorite = excuse ? favorites.some(f => f.text === excuse.text) : false;
+
   // Generate on first load
   useEffect(() => {
     generateExcuse();
@@ -54,10 +94,13 @@ export default function Home() {
       if (e.code === 'KeyC' && !e.repeat && !e.ctrlKey && !e.metaKey && document.activeElement?.tagName !== 'INPUT') {
         copyToClipboard();
       }
+      if (e.code === 'KeyF' && !e.repeat && !e.ctrlKey && !e.metaKey && document.activeElement?.tagName !== 'INPUT') {
+        toggleFavorite();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [generateExcuse, copyToClipboard]);
+  }, [generateExcuse, copyToClipboard, toggleFavorite]);
 
   return (
     <main className="min-h-screen bg-gradient-animate relative overflow-hidden">
@@ -82,6 +125,16 @@ export default function Home() {
               }`}
             >
               📅 {showDaily ? 'Hide Daily' : "Today's Excuse"}
+            </button>
+            <button
+              onClick={() => setShowFavorites(!showFavorites)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showFavorites
+                  ? 'bg-gradient-to-r from-pink-500/20 to-red-500/20 text-pink-300 border border-pink-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              ❤️ {favorites.length > 0 && <span className="text-xs">({favorites.length})</span>}
             </button>
           </div>
           
@@ -115,6 +168,40 @@ export default function Home() {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Favorites Panel */}
+        {showFavorites && (
+          <div className="w-full max-w-2xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pink-500/10 via-red-500/10 to-pink-500/10 border border-pink-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-pink-500/20 text-pink-300 text-xs font-semibold rounded-bl-lg">
+                ❤️ FAVORITES
+              </div>
+              {favorites.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">No favorites yet! Click the ❤️ button on any excuse to save it.</p>
+              ) : (
+                <div className="space-y-3 mt-2 max-h-64 overflow-y-auto">
+                  {favorites.map((fav, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all group">
+                      <span className="text-2xl">{fav.emoji}</span>
+                      <p className="flex-1 text-white text-sm">"{fav.text}"</p>
+                      <button
+                        onClick={() => {
+                          const updated = favorites.filter(f => f.text !== fav.text);
+                          setFavorites(updated);
+                          saveFavorites(updated);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all p-1"
+                        title="Remove from favorites"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -215,6 +302,18 @@ export default function Home() {
         {excuse && (
           <div className="flex gap-3 flex-wrap justify-center">
             <button
+              onClick={toggleFavorite}
+              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
+                isFavorite
+                  ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30'
+                  : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
+              } ${justFavorited ? 'scale-110' : ''}`}
+              style={{ transition: 'all 0.2s ease' }}
+            >
+              {isFavorite ? '❤️ Saved' : '🤍 Favorite'}
+            </button>
+            
+            <button
               onClick={copyToClipboard}
               className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
                 copied 
@@ -247,9 +346,11 @@ export default function Home() {
         <footer className="mt-16 text-center">
           <p className="text-gray-600 text-xs mb-3">
             <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">Space</kbd>
-            {' '}new excuse • {' '}
+            {' '}new • {' '}
             <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">C</kbd>
-            {' '}copy
+            {' '}copy • {' '}
+            <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">F</kbd>
+            {' '}favorite
           </p>
           <p className="text-gray-500 text-sm">
             Made with 🦞 by{' '}
