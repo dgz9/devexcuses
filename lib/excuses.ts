@@ -152,3 +152,23 @@ export const categories: { id: Category; label: string; emoji: string }[] = [
   { id: 'devops', label: 'DevOps', emoji: '🚀' },
   { id: 'management', label: 'Management', emoji: '📊' },
 ];
+
+// Shareable URL helpers
+export function getExcuseById(id: number): Excuse | null {
+  if (id >= 0 && id < excuses.length) {
+    return excuses[id];
+  }
+  return null;
+}
+
+export function getExcuseId(excuse: Excuse): number {
+  return excuses.findIndex(e => e.text === excuse.text);
+}
+
+export function generateShareUrl(excuse: Excuse): string {
+  const id = getExcuseId(excuse);
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}?e=${id}`;
+  }
+  return `?e=${id}`;
+}

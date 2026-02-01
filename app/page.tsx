@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, type Category, type Excuse } from '@/lib/excuses';
+import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, type Category, type Excuse } from '@/lib/excuses';
 
 // Favorites helpers
 function getFavorites(): Excuse[] {
@@ -26,6 +26,8 @@ export default function Home() {
   const [favorites, setFavorites] = useState<Excuse[]>([]);
   const [showFavorites, setShowFavorites] = useState(false);
   const [justFavorited, setJustFavorited] = useState(false);
+  const [isSharedExcuse, setIsSharedExcuse] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -54,6 +56,18 @@ export default function Home() {
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   }, [excuse]);
 
+  const copyShareLink = useCallback(async () => {
+    if (!excuse) return;
+    try {
+      const url = generateShareUrl(excuse);
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  }, [excuse]);
+
   // Load favorites from localStorage
   useEffect(() => {
     setFavorites(getFavorites());
@@ -79,8 +93,21 @@ export default function Home() {
 
   const isFavorite = excuse ? favorites.some(f => f.text === excuse.text) : false;
 
-  // Generate on first load
+  // Check for shared excuse in URL on first load
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedId = params.get('e');
+    if (sharedId !== null) {
+      const id = parseInt(sharedId, 10);
+      const sharedExcuse = getExcuseById(id);
+      if (sharedExcuse) {
+        setExcuse(sharedExcuse);
+        setIsSharedExcuse(true);
+        // Clean up URL without reload
+        window.history.replaceState({}, '', window.location.pathname);
+        return;
+      }
+    }
     generateExcuse();
   }, []);
 
@@ -149,6 +176,22 @@ export default function Home() {
             The perfect excuse for every <span className="text-violet-400">broken build</span>
           </p>
         </div>
+
+        {/* Shared Excuse Banner */}
+        {isSharedExcuse && (
+          <div className="w-full max-w-2xl mb-4 excuse-enter">
+            <div className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20">
+              <span className="text-violet-400">🔗</span>
+              <span className="text-sm text-violet-300">Someone shared this excuse with you!</span>
+              <button
+                onClick={() => setIsSharedExcuse(false)}
+                className="ml-2 text-violet-400/60 hover:text-violet-300"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Daily Excuse Banner */}
         {showDaily && (
@@ -331,6 +374,17 @@ export default function Home() {
               ) : (
                 <>📋 Copy</>
               )}
+            </button>
+            
+            <button
+              onClick={copyShareLink}
+              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
+                linkCopied 
+                  ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30' 
+                  : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              {linkCopied ? '✓ Link Copied!' : '🔗 Share Link'}
             </button>
             
             <button
