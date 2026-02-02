@@ -172,3 +172,23 @@ export function generateShareUrl(excuse: Excuse): string {
   }
   return `?e=${id}`;
 }
+
+// Excuse combinator - combine two excuses for maximum deflection
+const combinationTemplates = [
+  (a: string, b: string) => `${a}, but also ${b.toLowerCase()}`,
+  (a: string, b: string) => `${a}. Besides, ${b.toLowerCase()}`,
+  (a: string, b: string) => `${a} — and to be fair, ${b.toLowerCase()}`,
+  (a: string, b: string) => `Look, ${a.toLowerCase()}, plus ${b.toLowerCase()}`,
+  (a: string, b: string) => `${a}. On top of that, ${b.toLowerCase()}`,
+  (a: string, b: string) => `Not only ${a.toLowerCase()}, but ${b.toLowerCase()}`,
+];
+
+export function combineExcuses(excuse1: Excuse, excuse2: Excuse): string {
+  const template = combinationTemplates[Math.floor(Math.random() * combinationTemplates.length)];
+  return template(excuse1.text, excuse2.text);
+}
+
+export function getRandomComboExcuses(): [Excuse, Excuse] {
+  const shuffled = [...excuses].sort(() => Math.random() - 0.5);
+  return [shuffled[0], shuffled[1]];
+}

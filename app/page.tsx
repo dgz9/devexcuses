@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, type Category, type Excuse } from '@/lib/excuses';
+import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, type Category, type Excuse } from '@/lib/excuses';
 
 // Favorites helpers
 function getFavorites(): Excuse[] {
@@ -28,6 +28,9 @@ export default function Home() {
   const [justFavorited, setJustFavorited] = useState(false);
   const [isSharedExcuse, setIsSharedExcuse] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [comboMode, setComboMode] = useState(false);
+  const [comboExcuses, setComboExcuses] = useState<[Excuse, Excuse] | null>(null);
+  const [comboText, setComboText] = useState<string>('');
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -39,7 +42,29 @@ export default function Home() {
     }, 200);
   }, [selectedCategory]);
 
+  const generateCombo = useCallback(() => {
+    setIsGenerating(true);
+    setAnimateEmoji(true);
+    setTimeout(() => {
+      const [e1, e2] = getRandomComboExcuses();
+      setComboExcuses([e1, e2]);
+      setComboText(combineExcuses(e1, e2));
+      setIsGenerating(false);
+      setTimeout(() => setAnimateEmoji(false), 600);
+    }, 200);
+  }, []);
+
   const copyToClipboard = useCallback(async () => {
+    if (comboMode && comboText) {
+      try {
+        await navigator.clipboard.writeText(`"${comboText}" 🎰🎰`);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+      return;
+    }
     if (!excuse) return;
     try {
       await navigator.clipboard.writeText(`"${excuse.text}" ${excuse.emoji}`);
@@ -48,7 +73,7 @@ export default function Home() {
     } catch (err) {
       console.error('Failed to copy:', err);
     }
-  }, [excuse]);
+  }, [excuse, comboMode, comboText]);
 
   const shareToTwitter = useCallback(() => {
     if (!excuse) return;
@@ -163,6 +188,16 @@ export default function Home() {
             >
               ❤️ {favorites.length > 0 && <span className="text-xs">({favorites.length})</span>}
             </button>
+            <button
+              onClick={() => { setComboMode(!comboMode); if (!comboMode) generateCombo(); }}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                comboMode
+                  ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              🎰 Combo Mode
+            </button>
           </div>
           
           <h1 className="text-5xl sm:text-7xl font-bold mb-4 tracking-tight">
@@ -276,8 +311,36 @@ export default function Home() {
           ))}
         </div>
 
+        {/* Combo Card */}
+        {comboMode && comboExcuses && (
+          <div className="w-full max-w-2xl mb-8">
+            <div className="glass-card rounded-3xl p-8 sm:p-12 text-center excuse-enter">
+              <div className="flex justify-center gap-4 mb-6">
+                <span className={`text-5xl ${animateEmoji ? 'emoji-bounce' : ''}`}>{comboExcuses[0].emoji}</span>
+                <span className="text-4xl text-cyan-400">+</span>
+                <span className={`text-5xl ${animateEmoji ? 'emoji-bounce' : ''}`}>{comboExcuses[1].emoji}</span>
+              </div>
+              
+              <div className="mb-4 p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+                <p className="text-sm text-cyan-400 font-medium mb-1">💥 COMBO EXCUSE</p>
+              </div>
+              
+              <p className="text-xl sm:text-2xl lg:text-3xl font-medium text-white mb-6 leading-tight">
+                "{comboText}"
+              </p>
+              
+              <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-gray-500">
+                <span>Combined from:</span>
+                <span className="px-2 py-1 rounded bg-white/5">{comboExcuses[0].text.slice(0, 30)}...</span>
+                <span>+</span>
+                <span className="px-2 py-1 rounded bg-white/5">{comboExcuses[1].text.slice(0, 30)}...</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Excuse Card */}
-        <div className="w-full max-w-2xl mb-8">
+        <div className={`w-full max-w-2xl mb-8 ${comboMode ? 'hidden' : ''}`}>
           {excuse ? (
             <div 
               key={excuse.text} 
@@ -322,9 +385,11 @@ export default function Home() {
 
         {/* Generate Button */}
         <button
-          onClick={generateExcuse}
+          onClick={comboMode ? generateCombo : generateExcuse}
           disabled={isGenerating}
-          className="btn-primary text-white font-semibold py-4 px-10 rounded-2xl text-lg mb-8 disabled:opacity-50 disabled:cursor-not-allowed relative"
+          className={`text-white font-semibold py-4 px-10 rounded-2xl text-lg mb-8 disabled:opacity-50 disabled:cursor-not-allowed relative ${
+            comboMode ? 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500' : 'btn-primary'
+          }`}
         >
           <span className="relative z-10 flex items-center gap-2">
             {isGenerating ? (
@@ -335,6 +400,8 @@ export default function Home() {
                 </svg>
                 Generating...
               </>
+            ) : comboMode ? (
+              <>🎰 New Combo</>
             ) : (
               <>🎲 Another Excuse</>
             )}
@@ -342,7 +409,7 @@ export default function Home() {
         </button>
 
         {/* Action Buttons */}
-        {excuse && (
+        {(excuse || (comboMode && comboText)) && (
           <div className="flex gap-3 flex-wrap justify-center">
             <button
               onClick={toggleFavorite}
