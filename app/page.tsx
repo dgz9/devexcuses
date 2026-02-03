@@ -3,6 +3,17 @@
 import { useState, useCallback, useEffect } from 'react';
 import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, type Category, type Excuse } from '@/lib/excuses';
 
+// Theme helpers
+function getTheme(): 'dark' | 'light' {
+  if (typeof window === 'undefined') return 'dark';
+  return (localStorage.getItem('devexcuses-theme') as 'dark' | 'light') || 'dark';
+}
+
+function setTheme(theme: 'dark' | 'light') {
+  localStorage.setItem('devexcuses-theme', theme);
+  document.documentElement.setAttribute('data-theme', theme);
+}
+
 // Favorites helpers
 function getFavorites(): Excuse[] {
   if (typeof window === 'undefined') return [];
@@ -31,6 +42,7 @@ export default function Home() {
   const [comboMode, setComboMode] = useState(false);
   const [comboExcuses, setComboExcuses] = useState<[Excuse, Excuse] | null>(null);
   const [comboText, setComboText] = useState<string>('');
+  const [theme, setThemeState] = useState<'dark' | 'light'>('dark');
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -97,6 +109,19 @@ export default function Home() {
   useEffect(() => {
     setFavorites(getFavorites());
   }, []);
+
+  // Initialize theme on mount
+  useEffect(() => {
+    const savedTheme = getTheme();
+    setThemeState(savedTheme);
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setThemeState(newTheme);
+    setTheme(newTheme);
+  }, [theme]);
 
   // Toggle favorite
   const toggleFavorite = useCallback(() => {
@@ -197,6 +222,13 @@ export default function Home() {
               }`}
             >
               🎰 Combo Mode
+            </button>
+            <button
+              onClick={toggleTheme}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'} {theme === 'dark' ? 'Light' : 'Dark'}
             </button>
           </div>
           

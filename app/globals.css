@@ -11,6 +11,58 @@
   --accent-2: #ec4899;
 }
 
+/* Light theme */
+[data-theme="light"] {
+  --background: #fafafa;
+  --foreground: #1a1a2e;
+}
+
+[data-theme="light"] body {
+  background: #f5f5f7;
+  color: #1a1a2e;
+}
+
+[data-theme="light"] .bg-gradient-animate {
+  background: linear-gradient(-45deg, #f0f0f5, #e8e8f0, #f5f0fa, #faf5ff);
+  background-size: 400% 400%;
+}
+
+[data-theme="light"] .glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .orb {
+  opacity: 0.2;
+}
+
+[data-theme="light"] .text-white {
+  color: #1a1a2e;
+}
+
+[data-theme="light"] .text-gray-400,
+[data-theme="light"] .text-gray-500,
+[data-theme="light"] .text-gray-600 {
+  color: #666;
+}
+
+[data-theme="light"] .bg-white\/5 {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .bg-white\/10 {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .border-white\/10 {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .hover\:bg-white\/10:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
 * {
   box-sizing: border-box;
 }
