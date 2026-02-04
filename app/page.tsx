@@ -143,6 +143,32 @@ export default function Home() {
 
   const isFavorite = excuse ? favorites.some(f => f.text === excuse.text) : false;
 
+  // Random from favorites
+  const pickRandomFavorite = useCallback(() => {
+    if (favorites.length === 0) return;
+    setIsGenerating(true);
+    setAnimateEmoji(true);
+    setTimeout(() => {
+      const randomFav = favorites[Math.floor(Math.random() * favorites.length)];
+      setExcuse(randomFav);
+      setIsGenerating(false);
+      setTimeout(() => setAnimateEmoji(false), 600);
+    }, 200);
+  }, [favorites]);
+
+  // Export favorites as text
+  const exportFavorites = useCallback(async () => {
+    if (favorites.length === 0) return;
+    const text = favorites.map(f => `${f.emoji} "${f.text}"`).join('\n\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to export:', err);
+    }
+  }, [favorites]);
+
   // Check for shared excuse in URL on first load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -292,7 +318,22 @@ export default function Home() {
               {favorites.length === 0 ? (
                 <p className="text-gray-400 text-center py-4">No favorites yet! Click the ❤️ button on any excuse to save it.</p>
               ) : (
-                <div className="space-y-3 mt-2 max-h-64 overflow-y-auto">
+                <>
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={pickRandomFavorite}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 text-sm font-medium transition-all"
+                    >
+                      🎲 Random Favorite
+                    </button>
+                    <button
+                      onClick={exportFavorites}
+                      className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-medium transition-all border border-white/10"
+                    >
+                      📋 Export All
+                    </button>
+                  </div>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
                   {favorites.map((fav, i) => (
                     <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all group">
                       <span className="text-2xl">{fav.emoji}</span>
@@ -311,6 +352,7 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+                </>
               )}
             </div>
           </div>
