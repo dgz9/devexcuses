@@ -192,3 +192,12 @@ export function getRandomComboExcuses(): [Excuse, Excuse] {
   const shuffled = [...excuses].sort(() => Math.random() - 0.5);
   return [shuffled[0], shuffled[1]];
 }
+
+// Search excuses by keyword
+export function searchExcuses(query: string, category?: Category): Excuse[] {
+  const q = query.toLowerCase().trim();
+  if (!q) return [];
+  let filtered = excuses;
+  if (category) filtered = filtered.filter(e => e.category === category);
+  return filtered.filter(e => e.text.toLowerCase().includes(q));
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, type Category, type Excuse } from '@/lib/excuses';
+import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, type Category, type Excuse } from '@/lib/excuses';
 
 // Theme helpers
 function getTheme(): 'dark' | 'light' {
@@ -43,6 +43,9 @@ export default function Home() {
   const [comboExcuses, setComboExcuses] = useState<[Excuse, Excuse] | null>(null);
   const [comboText, setComboText] = useState<string>('');
   const [theme, setThemeState] = useState<'dark' | 'light'>('dark');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Excuse[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -169,6 +172,23 @@ export default function Home() {
     }
   }, [favorites]);
 
+  // Search handler
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    if (query.trim().length > 0) {
+      setSearchResults(searchExcuses(query, selectedCategory));
+    } else {
+      setSearchResults([]);
+    }
+  }, [selectedCategory]);
+
+  const selectSearchResult = useCallback((result: Excuse) => {
+    setExcuse(result);
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearch(false);
+  }, []);
+
   // Check for shared excuse in URL on first load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -199,6 +219,10 @@ export default function Home() {
       }
       if (e.code === 'KeyF' && !e.repeat && !e.ctrlKey && !e.metaKey && document.activeElement?.tagName !== 'INPUT') {
         toggleFavorite();
+      }
+      if (e.code === 'KeyS' && !e.repeat && !e.ctrlKey && !e.metaKey && document.activeElement?.tagName !== 'INPUT') {
+        e.preventDefault();
+        setShowSearch(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -255,6 +279,16 @@ export default function Home() {
               title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
               {theme === 'dark' ? '☀️' : '🌙'} {theme === 'dark' ? 'Light' : 'Dark'}
+            </button>
+            <button
+              onClick={() => { setShowSearch(!showSearch); if (showSearch) { setSearchQuery(''); setSearchResults([]); } }}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showSearch
+                  ? 'bg-gradient-to-r from-violet-500/20 to-indigo-500/20 text-violet-300 border border-violet-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              🔍 Search
             </button>
           </div>
           
@@ -353,6 +387,61 @@ export default function Home() {
                   ))}
                 </div>
                 </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Search Panel */}
+        {showSearch && (
+          <div className="w-full max-w-2xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-violet-500/10 border border-violet-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-violet-500/20 text-violet-300 text-xs font-semibold rounded-bl-lg">
+                🔍 SEARCH
+              </div>
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  placeholder="Search excuses... (e.g. cache, bug, CSS)"
+                  className="w-full px-4 py-3 pl-10 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/25 transition-all"
+                  autoFocus
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
+                {searchQuery && (
+                  <button
+                    onClick={() => { setSearchQuery(''); setSearchResults([]); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {searchQuery && searchResults.length === 0 && (
+                <p className="text-gray-400 text-center py-3 text-sm">No excuses match "{searchQuery}" 🤷</p>
+              )}
+              {searchResults.length > 0 && (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  <p className="text-xs text-violet-400/70 mb-2">{searchResults.length} excuse{searchResults.length !== 1 ? 's' : ''} found</p>
+                  {searchResults.map((result, i) => (
+                    <button
+                      key={i}
+                      onClick={() => selectSearchResult(result)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-left group"
+                    >
+                      <span className="text-2xl group-hover:scale-110 transition-transform">{result.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm truncate">"{result.text}"</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-gray-500">{categories.find(c => c.id === result.category)?.emoji} {categories.find(c => c.id === result.category)?.label}</span>
+                          <span className="text-xs text-gray-600">{'🔥'.repeat(result.spice)}</span>
+                        </div>
+                      </div>
+                      <span className="text-gray-600 group-hover:text-violet-400 transition-colors text-sm">→</span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -545,7 +634,9 @@ export default function Home() {
             <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">C</kbd>
             {' '}copy • {' '}
             <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">F</kbd>
-            {' '}favorite
+            {' '}favorite • {' '}
+            <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">S</kbd>
+            {' '}search
           </p>
           <p className="text-gray-500 text-sm">
             Made with 🦞 by{' '}
