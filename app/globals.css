@@ -63,6 +63,16 @@
   background: rgba(0, 0, 0, 0.1);
 }
 
+[data-theme="light"] input[type="text"] {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #1a1a2e;
+}
+
+[data-theme="light"] input[type="text"]::placeholder {
+  color: #999;
+}
+
 * {
   box-sizing: border-box;
 }
