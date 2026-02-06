@@ -14,6 +14,100 @@ function setTheme(theme: 'dark' | 'light') {
   document.documentElement.setAttribute('data-theme', theme);
 }
 
+// Sound helpers
+function getSoundEnabled(): boolean {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem('devexcuses-sound') !== 'false'; // Default on
+}
+
+function setSoundEnabled(enabled: boolean) {
+  localStorage.setItem('devexcuses-sound', enabled ? 'true' : 'false');
+}
+
+// Fun sound effect generator using Web Audio API
+function playExcuseSound(spice: number) {
+  if (typeof window === 'undefined') return;
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create multiple oscillators for richer sound
+    const createTone = (freq: number, type: OscillatorType, delay: number, duration: number) => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.value = 0;
+      
+      const startTime = audioContext.currentTime + delay;
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.08, startTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    
+    if (spice >= 4) {
+      // Spicy! - dramatic descending notes 🔥🔥🔥🔥
+      createTone(880, 'sine', 0, 0.15);
+      createTone(659, 'sine', 0.08, 0.15);
+      createTone(523, 'sine', 0.16, 0.2);
+      createTone(392, 'triangle', 0.24, 0.25);
+    } else if (spice >= 3) {
+      // Medium spicy - upbeat bounce
+      createTone(523, 'sine', 0, 0.12);
+      createTone(659, 'sine', 0.1, 0.15);
+      createTone(784, 'triangle', 0.2, 0.2);
+    } else if (spice >= 2) {
+      // Mild - gentle chime
+      createTone(659, 'sine', 0, 0.15);
+      createTone(784, 'sine', 0.08, 0.2);
+    } else {
+      // Safe - soft pop
+      createTone(523, 'sine', 0, 0.12);
+      createTone(659, 'triangle', 0.06, 0.15);
+    }
+  } catch (e) {
+    // Audio not available
+  }
+}
+
+function playComboSound() {
+  if (typeof window === 'undefined') return;
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    const createTone = (freq: number, type: OscillatorType, delay: number, duration: number) => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.value = 0;
+      
+      const startTime = audioContext.currentTime + delay;
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.06, startTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    
+    // Slot machine style! 🎰
+    createTone(440, 'square', 0, 0.08);
+    createTone(554, 'square', 0.08, 0.08);
+    createTone(659, 'square', 0.16, 0.08);
+    createTone(880, 'sine', 0.24, 0.3);
+    createTone(1108, 'triangle', 0.3, 0.25);
+  } catch (e) {
+    // Audio not available
+  }
+}
+
 // Favorites helpers
 function getFavorites(): Excuse[] {
   if (typeof window === 'undefined') return [];
@@ -43,16 +137,19 @@ export default function Home() {
   const [comboExcuses, setComboExcuses] = useState<[Excuse, Excuse] | null>(null);
   const [comboText, setComboText] = useState<string>('');
   const [theme, setThemeState] = useState<'dark' | 'light'>('dark');
+  const [soundEnabled, setSoundState] = useState(true);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
     setAnimateEmoji(true);
     setTimeout(() => {
-      setExcuse(getRandomExcuse(selectedCategory));
+      const newExcuse = getRandomExcuse(selectedCategory);
+      setExcuse(newExcuse);
+      if (soundEnabled) playExcuseSound(newExcuse.spice);
       setIsGenerating(false);
       setTimeout(() => setAnimateEmoji(false), 600);
     }, 200);
-  }, [selectedCategory]);
+  }, [selectedCategory, soundEnabled]);
 
   const generateCombo = useCallback(() => {
     setIsGenerating(true);
@@ -61,10 +158,11 @@ export default function Home() {
       const [e1, e2] = getRandomComboExcuses();
       setComboExcuses([e1, e2]);
       setComboText(combineExcuses(e1, e2));
+      if (soundEnabled) playComboSound();
       setIsGenerating(false);
       setTimeout(() => setAnimateEmoji(false), 600);
     }, 200);
-  }, []);
+  }, [soundEnabled]);
 
   const copyToClipboard = useCallback(async () => {
     if (comboMode && comboText) {
@@ -110,11 +208,12 @@ export default function Home() {
     setFavorites(getFavorites());
   }, []);
 
-  // Initialize theme on mount
+  // Initialize theme and sound on mount
   useEffect(() => {
     const savedTheme = getTheme();
     setThemeState(savedTheme);
     document.documentElement.setAttribute('data-theme', savedTheme);
+    setSoundState(getSoundEnabled());
   }, []);
 
   const toggleTheme = useCallback(() => {
@@ -122,6 +221,14 @@ export default function Home() {
     setThemeState(newTheme);
     setTheme(newTheme);
   }, [theme]);
+
+  const toggleSound = useCallback(() => {
+    const newState = !soundEnabled;
+    setSoundState(newState);
+    setSoundEnabled(newState);
+    // Play a test sound when enabling
+    if (newState) playExcuseSound(2);
+  }, [soundEnabled]);
 
   // Toggle favorite
   const toggleFavorite = useCallback(() => {
@@ -248,6 +355,17 @@ export default function Home() {
               }`}
             >
               🎰 Combo Mode
+            </button>
+            <button
+              onClick={toggleSound}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border ${
+                soundEnabled
+                  ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border-white/10'
+              }`}
+              title={soundEnabled ? 'Sound effects on' : 'Sound effects off'}
+            >
+              {soundEnabled ? '🔊' : '🔇'}
             </button>
             <button
               onClick={toggleTheme}
