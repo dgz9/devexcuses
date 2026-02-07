@@ -138,6 +138,9 @@ export default function Home() {
   const [comboText, setComboText] = useState<string>('');
   const [theme, setThemeState] = useState<'dark' | 'light'>('dark');
   const [soundEnabled, setSoundState] = useState(true);
+  const [history, setHistory] = useState<Excuse[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -145,11 +148,38 @@ export default function Home() {
     setTimeout(() => {
       const newExcuse = getRandomExcuse(selectedCategory);
       setExcuse(newExcuse);
+      // Add to history (keep last 20)
+      setHistory(prev => {
+        const updated = [...prev, newExcuse].slice(-20);
+        setHistoryIndex(updated.length - 1);
+        return updated;
+      });
       if (soundEnabled) playExcuseSound(newExcuse.spice);
       setIsGenerating(false);
       setTimeout(() => setAnimateEmoji(false), 600);
     }, 200);
   }, [selectedCategory, soundEnabled]);
+
+  // Navigate history
+  const goToPrevious = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setExcuse(history[newIndex]);
+      setAnimateEmoji(true);
+      setTimeout(() => setAnimateEmoji(false), 300);
+    }
+  }, [historyIndex, history]);
+
+  const goToNext = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setExcuse(history[newIndex]);
+      setAnimateEmoji(true);
+      setTimeout(() => setAnimateEmoji(false), 300);
+    }
+  }, [historyIndex, history]);
 
   const generateCombo = useCallback(() => {
     setIsGenerating(true);
@@ -307,10 +337,17 @@ export default function Home() {
       if (e.code === 'KeyF' && !e.repeat && !e.ctrlKey && !e.metaKey && document.activeElement?.tagName !== 'INPUT') {
         toggleFavorite();
       }
+      // Arrow keys for history navigation
+      if (e.code === 'ArrowLeft' && !e.repeat && document.activeElement?.tagName !== 'INPUT') {
+        goToPrevious();
+      }
+      if (e.code === 'ArrowRight' && !e.repeat && document.activeElement?.tagName !== 'INPUT') {
+        goToNext();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [generateExcuse, copyToClipboard, toggleFavorite]);
+  }, [generateExcuse, copyToClipboard, toggleFavorite, goToPrevious, goToNext]);
 
   return (
     <main className="min-h-screen bg-gradient-animate relative overflow-hidden">
@@ -355,6 +392,16 @@ export default function Home() {
               }`}
             >
               🎰 Combo Mode
+            </button>
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showHistory
+                  ? 'bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-300 border border-blue-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              🕐 History {history.length > 0 && <span className="text-xs">({history.length})</span>}
             </button>
             <button
               onClick={toggleSound}
@@ -422,6 +469,61 @@ export default function Home() {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* History Panel */}
+        {showHistory && (
+          <div className="w-full max-w-2xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-blue-500/10 border border-blue-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-blue-500/20 text-blue-300 text-xs font-semibold rounded-bl-lg">
+                🕐 SESSION HISTORY
+              </div>
+              {history.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">No excuses generated yet this session!</p>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-blue-300">
+                      Viewing {historyIndex + 1} of {history.length}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={goToPrevious}
+                        disabled={historyIndex <= 0}
+                        className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 disabled:opacity-30 disabled:cursor-not-allowed text-blue-300 text-sm font-medium transition-all"
+                      >
+                        ← Prev
+                      </button>
+                      <button
+                        onClick={goToNext}
+                        disabled={historyIndex >= history.length - 1}
+                        className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 disabled:opacity-30 disabled:cursor-not-allowed text-blue-300 text-sm font-medium transition-all"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {history.map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setHistoryIndex(i); setExcuse(item); }}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${
+                          i === historyIndex
+                            ? 'bg-blue-500/20 border border-blue-500/30'
+                            : 'bg-white/5 hover:bg-white/10'
+                        }`}
+                      >
+                        <span className="text-xl">{item.emoji}</span>
+                        <p className="flex-1 text-white text-sm truncate">"{item.text}"</p>
+                        <span className="text-xs text-gray-500">#{i + 1}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -660,6 +762,9 @@ export default function Home() {
           <p className="text-gray-600 text-xs mb-3">
             <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">Space</kbd>
             {' '}new • {' '}
+            <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">←</kbd>
+            <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">→</kbd>
+            {' '}history • {' '}
             <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">C</kbd>
             {' '}copy • {' '}
             <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">F</kbd>
