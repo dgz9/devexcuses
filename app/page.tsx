@@ -140,20 +140,18 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Excuse[]>([]);
   const [showSearch, setShowSearch] = useState(false);
+  const [history, setHistory] = useState<Excuse[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
     setAnimateEmoji(true);
     setTimeout(() => {
       const newExcuse = getRandomExcuse(selectedCategory);
-      setExcuse(newExcuse);
-      // Add to history (keep last 20)
-      setHistory(prev => {
-        const updated = [...prev, newExcuse].slice(-20);
-        setHistoryIndex(updated.length - 1);
-        return updated;
+      setExcuse(prev => {
+        if (prev) setHistory(h => [prev, ...h].slice(0, 25));
+        return newExcuse;
       });
-      if (soundEnabled) playExcuseSound(newExcuse.spice);
       setIsGenerating(false);
       setTimeout(() => setAnimateEmoji(false), 600);
     }, 200);
@@ -357,6 +355,10 @@ export default function Home() {
         e.preventDefault();
         setShowSearch(prev => !prev);
       }
+      if (e.code === 'KeyH' && !e.repeat && !e.ctrlKey && !e.metaKey && document.activeElement?.tagName !== 'INPUT') {
+        e.preventDefault();
+        setShowHistory(prev => !prev);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -443,6 +445,16 @@ export default function Home() {
               }`}
             >
               🔍 Search
+            </button>
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showHistory
+                  ? 'bg-gradient-to-r from-teal-500/20 to-emerald-500/20 text-teal-300 border border-teal-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              🕐 History {history.length > 0 && <span className="text-xs">({history.length})</span>}
             </button>
           </div>
           
@@ -656,6 +668,47 @@ export default function Home() {
           </div>
         )}
 
+        {/* History Panel */}
+        {showHistory && (
+          <div className="w-full max-w-2xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-teal-500/10 via-emerald-500/10 to-teal-500/10 border border-teal-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-teal-500/20 text-teal-300 text-xs font-semibold rounded-bl-lg">
+                🕐 HISTORY
+              </div>
+              {history.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">No history yet! Generate some excuses to build your timeline.</p>
+              ) : (
+                <>
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={() => setHistory([])}
+                      className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-medium transition-all border border-white/10"
+                    >
+                      🗑️ Clear History
+                    </button>
+                  </div>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {history.map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setExcuse(item); setShowHistory(false); }}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-left group"
+                      >
+                        <span className="text-2xl group-hover:scale-110 transition-transform">{item.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm truncate">"{item.text}"</p>
+                          <span className="text-xs text-gray-500">{categories.find(c => c.id === item.category)?.emoji} {categories.find(c => c.id === item.category)?.label}</span>
+                        </div>
+                        <span className="text-gray-600 group-hover:text-teal-400 transition-colors text-xs">#{history.length - i}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Category Pills */}
         <div className="flex flex-wrap justify-center gap-2 mb-8 max-w-2xl">
           <button
@@ -848,7 +901,9 @@ export default function Home() {
             <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">F</kbd>
             {' '}favorite • {' '}
             <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">S</kbd>
-            {' '}search
+            {' '}search • {' '}
+            <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">H</kbd>
+            {' '}history
           </p>
           <p className="text-gray-500 text-sm">
             Made with 🦞 by{' '}
