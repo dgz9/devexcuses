@@ -141,7 +141,9 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<Excuse[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [history, setHistory] = useState<Excuse[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
+  const [soundEnabled, setSoundState] = useState(false);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -152,6 +154,7 @@ export default function Home() {
         if (prev) setHistory(h => [prev, ...h].slice(0, 25));
         return newExcuse;
       });
+      if (soundEnabled) playExcuseSound(newExcuse.spice);
       setIsGenerating(false);
       setTimeout(() => setAnimateEmoji(false), 600);
     }, 200);

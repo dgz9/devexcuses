@@ -98,6 +98,23 @@ export const excuses: Excuse[] = [
   { text: "We're pivoting", category: "management", emoji: "🔀", spice: 4 },
   { text: "The MVP was already shipped", category: "management", emoji: "🚀", spice: 3 },
   { text: "We'll address that in phase 2", category: "management", emoji: "2️⃣", spice: 3 },
+
+  // AI & Modern Era (2025+)
+  { text: "The AI wrote that code, not me", category: "universal", emoji: "🤖", spice: 3 },
+  { text: "Copilot suggested it, I just hit Tab", category: "universal", emoji: "🤷", spice: 4 },
+  { text: "The LLM hallucinated that function", category: "universal", emoji: "🧠", spice: 4 },
+  { text: "I asked ChatGPT and it said it was fine", category: "universal", emoji: "💬", spice: 5 },
+  { text: "The prompt was ambiguous", category: "universal", emoji: "📝", spice: 3 },
+  { text: "It's an AI alignment issue", category: "universal", emoji: "🎯", spice: 5 },
+  { text: "The model was trained on outdated Stack Overflow answers", category: "backend", emoji: "📚", spice: 4 },
+  { text: "The GPU ran out of VRAM", category: "devops", emoji: "🎮", spice: 2 },
+  { text: "Vibes-based development has its tradeoffs", category: "universal", emoji: "✨", spice: 5 },
+  { text: "The AI code review approved it", category: "universal", emoji: "✅", spice: 4 },
+  { text: "That's a known Tailwind footgun", category: "frontend", emoji: "💨", spice: 2 },
+  { text: "The monorepo dependencies conflicted", category: "devops", emoji: "🏗️", spice: 2 },
+  { text: "The edge function timed out", category: "backend", emoji: "⏱️", spice: 2 },
+  { text: "Vercel's cold start was too cold", category: "devops", emoji: "🥶", spice: 2 },
+  { text: "TypeScript said 'any' was fine", category: "frontend", emoji: "🏴‍☠️", spice: 4 },
 ];
 
 // Get spice level label
