@@ -115,6 +115,20 @@ export const excuses: Excuse[] = [
   { text: "The edge function timed out", category: "backend", emoji: "⏱️", spice: 2 },
   { text: "Vercel's cold start was too cold", category: "devops", emoji: "🥶", spice: 2 },
   { text: "TypeScript said 'any' was fine", category: "frontend", emoji: "🏴‍☠️", spice: 4 },
+
+  // Remote Work & WFH
+  { text: "My internet went out during the deploy", category: "devops", emoji: "📡", spice: 2 },
+  { text: "Sorry, I was on mute the whole standup", category: "management", emoji: "🔇", spice: 2 },
+  { text: "My cat walked across the keyboard", category: "universal", emoji: "🐱", spice: 3 },
+  { text: "I was in a different timezone when I pushed that", category: "universal", emoji: "🌍", spice: 3 },
+  { text: "The VPN dropped mid-commit", category: "devops", emoji: "🔒", spice: 2 },
+  { text: "Slack ate my message with the fix instructions", category: "management", emoji: "💬", spice: 3 },
+  { text: "I thought the meeting was tomorrow", category: "management", emoji: "📅", spice: 3 },
+  { text: "My home office setup doesn't reproduce the bug", category: "universal", emoji: "🏠", spice: 3 },
+  { text: "The coffee machine broke so I couldn't think straight", category: "universal", emoji: "☕", spice: 4 },
+  { text: "I was pair programming with my dog", category: "universal", emoji: "🐕", spice: 5 },
+  { text: "My standing desk motor glitched and I lost focus", category: "universal", emoji: "🪑", spice: 4 },
+  { text: "The Zoom call drained my laptop right before I could push", category: "devops", emoji: "🔋", spice: 3 },
 ];
 
 // Get spice level label
@@ -208,6 +222,12 @@ export function combineExcuses(excuse1: Excuse, excuse2: Excuse): string {
 export function getRandomComboExcuses(): [Excuse, Excuse] {
   const shuffled = [...excuses].sort(() => Math.random() - 0.5);
   return [shuffled[0], shuffled[1]];
+}
+
+// Format excuse for Slack
+export function formatForSlack(excuse: Excuse): string {
+  const spiceBar = '🔥'.repeat(excuse.spice);
+  return `>${excuse.emoji} _"${excuse.text}"_\n${spiceBar} • via <https://devexcuses-one.vercel.app|DevExcuses>`;
 }
 
 // Search excuses by keyword

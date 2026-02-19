@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, type Category, type Excuse } from '@/lib/excuses';
+import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, type Category, type Excuse } from '@/lib/excuses';
 
 // Theme helpers
 function getTheme(): 'dark' | 'light' {
@@ -133,6 +133,7 @@ export default function Home() {
   const [justFavorited, setJustFavorited] = useState(false);
   const [isSharedExcuse, setIsSharedExcuse] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [slackCopied, setSlackCopied] = useState(false);
   const [comboMode, setComboMode] = useState(false);
   const [comboExcuses, setComboExcuses] = useState<[Excuse, Excuse] | null>(null);
   const [comboText, setComboText] = useState<string>('');
@@ -230,6 +231,17 @@ export default function Home() {
       setTimeout(() => setLinkCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy link:', err);
+    }
+  }, [excuse]);
+
+  const copyForSlack = useCallback(async () => {
+    if (!excuse) return;
+    try {
+      await navigator.clipboard.writeText(formatForSlack(excuse));
+      setSlackCopied(true);
+      setTimeout(() => setSlackCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
   }, [excuse]);
 
@@ -379,7 +391,7 @@ export default function Home() {
           <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-sm text-gray-400">70+ excuses and counting</span>
+              <span className="text-sm text-gray-400">95+ excuses and counting</span>
             </div>
             <button
               onClick={() => setShowDaily(!showDaily)}
@@ -880,6 +892,17 @@ export default function Home() {
               }`}
             >
               {linkCopied ? '✓ Link Copied!' : '🔗 Share Link'}
+            </button>
+            
+            <button
+              onClick={copyForSlack}
+              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
+                slackCopied
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              {slackCopied ? '✓ Slack Copied!' : '💼 Slack'}
             </button>
             
             <button
