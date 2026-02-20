@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, type Category, type Excuse } from '@/lib/excuses';
+import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, type Category, type Excuse } from '@/lib/excuses';
 
 // Theme helpers
 function getTheme(): 'dark' | 'light' {
@@ -145,6 +145,7 @@ export default function Home() {
   const [historyIndex, setHistoryIndex] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
   const [soundEnabled, setSoundState] = useState(false);
+  const [standupCopied, setStandupCopied] = useState(false);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -231,6 +232,17 @@ export default function Home() {
       setTimeout(() => setLinkCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy link:', err);
+    }
+  }, [excuse]);
+
+  const copyForStandup = useCallback(async () => {
+    if (!excuse) return;
+    try {
+      await navigator.clipboard.writeText(formatForStandup(excuse));
+      setStandupCopied(true);
+      setTimeout(() => setStandupCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
   }, [excuse]);
 
@@ -391,7 +403,7 @@ export default function Home() {
           <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-sm text-gray-400">95+ excuses and counting</span>
+              <span className="text-sm text-gray-400">120+ excuses and counting</span>
             </div>
             <button
               onClick={() => setShowDaily(!showDaily)}
@@ -423,16 +435,7 @@ export default function Home() {
             >
               🎰 Combo Mode
             </button>
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                showHistory
-                  ? 'bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-300 border border-blue-500/30'
-                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
-              }`}
-            >
-              🕐 History {history.length > 0 && <span className="text-xs">({history.length})</span>}
-            </button>
+            {/* History button moved below */}
             <button
               onClick={toggleSound}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border ${
@@ -523,60 +526,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* History Panel */}
-        {showHistory && (
-          <div className="w-full max-w-2xl mb-8 excuse-enter">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-blue-500/10 border border-blue-500/20 p-6">
-              <div className="absolute top-0 right-0 px-3 py-1 bg-blue-500/20 text-blue-300 text-xs font-semibold rounded-bl-lg">
-                🕐 SESSION HISTORY
-              </div>
-              {history.length === 0 ? (
-                <p className="text-gray-400 text-center py-4">No excuses generated yet this session!</p>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm text-blue-300">
-                      Viewing {historyIndex + 1} of {history.length}
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={goToPrevious}
-                        disabled={historyIndex <= 0}
-                        className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 disabled:opacity-30 disabled:cursor-not-allowed text-blue-300 text-sm font-medium transition-all"
-                      >
-                        ← Prev
-                      </button>
-                      <button
-                        onClick={goToNext}
-                        disabled={historyIndex >= history.length - 1}
-                        className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 disabled:opacity-30 disabled:cursor-not-allowed text-blue-300 text-sm font-medium transition-all"
-                      >
-                        Next →
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {history.map((item, i) => (
-                      <button
-                        key={i}
-                        onClick={() => { setHistoryIndex(i); setExcuse(item); }}
-                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${
-                          i === historyIndex
-                            ? 'bg-blue-500/20 border border-blue-500/30'
-                            : 'bg-white/5 hover:bg-white/10'
-                        }`}
-                      >
-                        <span className="text-xl">{item.emoji}</span>
-                        <p className="flex-1 text-white text-sm truncate">"{item.text}"</p>
-                        <span className="text-xs text-gray-500">#{i + 1}</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
+        {/* History Panel removed (duplicate - see below) */}
 
         {/* Favorites Panel */}
         {showFavorites && (
@@ -903,6 +853,17 @@ export default function Home() {
               }`}
             >
               {slackCopied ? '✓ Slack Copied!' : '💼 Slack'}
+            </button>
+            
+            <button
+              onClick={copyForStandup}
+              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
+                standupCopied
+                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                  : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              {standupCopied ? '✓ Standup Copied!' : '🧑‍💼 Standup'}
             </button>
             
             <button

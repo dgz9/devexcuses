@@ -129,6 +129,23 @@ export const excuses: Excuse[] = [
   { text: "I was pair programming with my dog", category: "universal", emoji: "🐕", spice: 5 },
   { text: "My standing desk motor glitched and I lost focus", category: "universal", emoji: "🪑", spice: 4 },
   { text: "The Zoom call drained my laptop right before I could push", category: "devops", emoji: "🔋", spice: 3 },
+
+  // Standup Specials
+  { text: "I was blocked by the design team", category: "management", emoji: "🎨", spice: 2 },
+  { text: "I spent all day in code review", category: "universal", emoji: "👀", spice: 2 },
+  { text: "I was yak shaving — it's all connected, I promise", category: "universal", emoji: "🐃", spice: 4 },
+  { text: "I'm still ramping up on the codebase", category: "universal", emoji: "📚", spice: 2 },
+  { text: "I pair-programmed for 6 hours and forgot to commit", category: "universal", emoji: "👥", spice: 3 },
+  { text: "I was investigating a production incident that turned out to be a typo", category: "backend", emoji: "🔍", spice: 3 },
+  { text: "My PR has been open for 3 days with no reviewers", category: "management", emoji: "⏳", spice: 3 },
+  { text: "I automated myself out of the task", category: "devops", emoji: "🤖", spice: 4 },
+  { text: "I was optimizing something that didn't need optimizing", category: "backend", emoji: "⚡", spice: 3 },
+  { text: "The linter and I had a disagreement", category: "frontend", emoji: "🧹", spice: 2 },
+  { text: "I wrote the tests but forgot the implementation", category: "universal", emoji: "🧪", spice: 3 },
+  { text: "I spent 4 hours on a bug that was a missing semicolon", category: "frontend", emoji: "😤", spice: 2 },
+  { text: "The Docker image is still building", category: "devops", emoji: "🐳", spice: 2 },
+  { text: "I accidentally rebased the wrong branch", category: "universal", emoji: "🌿", spice: 4 },
+  { text: "My IDE crashed and took my unsaved changes with it", category: "universal", emoji: "💥", spice: 3 },
 ];
 
 // Get spice level label
@@ -228,6 +245,19 @@ export function getRandomComboExcuses(): [Excuse, Excuse] {
 export function formatForSlack(excuse: Excuse): string {
   const spiceBar = '🔥'.repeat(excuse.spice);
   return `>${excuse.emoji} _"${excuse.text}"_\n${spiceBar} • via <https://devexcuses-one.vercel.app|DevExcuses>`;
+}
+
+// Generate a standup-ready excuse with context
+const standupTemplates = [
+  (excuse: Excuse) => `🟡 *Blocker:* ${excuse.text}\n📋 *Status:* Investigating workaround\n⏭️ *Next:* Will try a different approach today`,
+  (excuse: Excuse) => `⚠️ *Yesterday:* Got stuck — ${excuse.text.toLowerCase()}\n🔨 *Today:* Picking up where I left off\n🚧 *Blocker:* Still unresolved`,
+  (excuse: Excuse) => `📊 *Update:* Made progress but hit a snag\n❌ *Issue:* ${excuse.text}\n✅ *Plan:* Pairing with someone to unblock`,
+  (excuse: Excuse) => `🔄 *In Progress:* Feature development\n🐛 *Challenge:* ${excuse.text.toLowerCase()}\n🎯 *ETA:* End of sprint (optimistically)`,
+];
+
+export function formatForStandup(excuse: Excuse): string {
+  const template = standupTemplates[Math.floor(Math.random() * standupTemplates.length)];
+  return template(excuse);
 }
 
 // Search excuses by keyword
