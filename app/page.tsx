@@ -146,6 +146,7 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
   const [soundEnabled, setSoundState] = useState(false);
   const [standupCopied, setStandupCopied] = useState(false);
+  const [bossMode, setBossMode] = useState(false);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -386,6 +387,9 @@ export default function Home() {
         e.preventDefault();
         setShowHistory(prev => !prev);
       }
+      if (e.code === 'Escape') {
+        setBossMode(prev => !prev);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -393,6 +397,50 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-animate relative overflow-hidden">
+      {/* Boss Mode - fake spreadsheet overlay */}
+      {bossMode && (
+        <div className="fixed inset-0 z-[100] bg-white text-black cursor-pointer" onClick={() => setBossMode(false)}>
+          <div className="bg-[#217346] text-white px-4 py-2 flex items-center gap-4 text-sm">
+            <span className="font-bold">📊 Excel Online</span>
+            <span>File</span><span>Home</span><span>Insert</span><span>Data</span><span>Review</span>
+          </div>
+          <div className="bg-[#f3f3f3] border-b px-4 py-1 text-xs text-gray-600 flex items-center gap-4">
+            <span>🔤 Calibri</span><span>11</span><span className="font-bold">B</span><span className="italic">I</span><span className="underline">U</span>
+          </div>
+          <div className="font-mono text-xs">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-[#e8e8e8]">
+                  <th className="border border-gray-300 w-8 px-1 py-1 text-gray-500"></th>
+                  {['A','B','C','D','E','F'].map(c => <th key={c} className="border border-gray-300 px-3 py-1 font-normal text-gray-600 min-w-[120px]">{c}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ['Q4 Budget Review','Revenue','Expenses','Net','Growth %','Status'],
+                  ['Product Team','$847,200','$623,100','$224,100','12.3%','On Track'],
+                  ['Engineering','$1,245,000','$1,180,400','$64,600','8.7%','Review'],
+                  ['Marketing','$523,000','$498,750','$24,250','15.1%','On Track'],
+                  ['Operations','$312,500','$287,300','$25,200','3.2%','At Risk'],
+                  ['Sales','$2,100,000','$1,650,000','$450,000','22.4%','Exceeding'],
+                  ['Support','$189,000','$175,400','$13,600','-2.1%','Review'],
+                  ['Total','$5,216,700','$4,414,950','$801,750','11.8%','On Track'],
+                  ['','','','','',''],
+                  ['Notes:','Q4 targets met across most departments','','','',''],
+                ].map((row, i) => (
+                  <tr key={i} className={i === 0 ? 'bg-[#d6e4f0] font-semibold' : i === 7 ? 'bg-[#e2efda] font-semibold' : ''}>
+                    <td className="border border-gray-300 px-1 py-1 text-center text-gray-500 bg-[#e8e8e8]">{i + 1}</td>
+                    {row.map((cell, j) => <td key={j} className="border border-gray-300 px-3 py-1">{cell}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="fixed bottom-4 right-4 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded">
+            Click anywhere or press Esc to return
+          </div>
+        </div>
+      )}
       {/* Glowing orbs */}
       <div className="orb orb-1" />
       <div className="orb orb-2" />
@@ -453,6 +501,13 @@ export default function Home() {
               title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
               {theme === 'dark' ? '☀️' : '🌙'} {theme === 'dark' ? 'Light' : 'Dark'}
+            </button>
+            <button
+              onClick={() => setBossMode(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
+              title="Boss coming? Quick, look productive! (or press Esc)"
+            >
+              🚨 Boss Mode
             </button>
             <button
               onClick={() => { setShowSearch(!showSearch); if (showSearch) { setSearchQuery(''); setSearchResults([]); } }}
@@ -890,7 +945,9 @@ export default function Home() {
             <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">S</kbd>
             {' '}search • {' '}
             <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">H</kbd>
-            {' '}history
+            {' '}history • {' '}
+            <kbd className="px-2 py-1 bg-white/5 border border-white/10 rounded text-gray-400 font-mono">Esc</kbd>
+            {' '}boss mode
           </p>
           <p className="text-gray-500 text-sm">
             Made with 🦞 by{' '}
