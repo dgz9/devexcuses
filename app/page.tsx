@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, type Category, type Excuse } from '@/lib/excuses';
+import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, type Category, type Excuse } from '@/lib/excuses';
 
 // Theme helpers
 function getTheme(): 'dark' | 'light' {
@@ -147,6 +147,9 @@ export default function Home() {
   const [soundEnabled, setSoundState] = useState(false);
   const [standupCopied, setStandupCopied] = useState(false);
   const [bossMode, setBossMode] = useState(false);
+  const [meetingEscape, setMeetingEscape] = useState(false);
+  const [meetingExcuse, setMeetingExcuse] = useState('');
+  const [meetingCopied, setMeetingCopied] = useState(false);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -510,6 +513,16 @@ export default function Home() {
               🚨 Boss Mode
             </button>
             <button
+              onClick={() => { setMeetingEscape(!meetingEscape); if (!meetingEscape) setMeetingExcuse(getRandomMeetingExcuse()); }}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                meetingEscape
+                  ? 'bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-300 border border-blue-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              🚪 Meeting Escape
+            </button>
+            <button
               onClick={() => { setShowSearch(!showSearch); if (showSearch) { setSearchQuery(''); setSearchResults([]); } }}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 showSearch
@@ -576,6 +589,48 @@ export default function Home() {
                     Same excuse for everyone today! Check back tomorrow for a new one.
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Meeting Escape Panel */}
+        {meetingEscape && (
+          <div className="w-full max-w-2xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-blue-500/10 border border-blue-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-blue-500/20 text-blue-300 text-xs font-semibold rounded-bl-lg">
+                🚪 MEETING ESCAPE
+              </div>
+              <div className="mb-4">
+                <p className="text-xs text-blue-400/70 mb-3">Need to leave a meeting? Copy one of these and drop it in the chat:</p>
+              </div>
+              <div className="flex items-center gap-4 mb-4 p-4 rounded-xl bg-white/5">
+                <span className="text-3xl">🏃</span>
+                <p className="text-lg font-medium text-white flex-1">"{meetingExcuse}"</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMeetingExcuse(getRandomMeetingExcuse())}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-sm font-medium transition-all"
+                >
+                  🎲 Another Excuse
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(meetingExcuse);
+                      setMeetingCopied(true);
+                      setTimeout(() => setMeetingCopied(false), 2000);
+                    } catch (err) { console.error(err); }
+                  }}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    meetingCopied
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                      : 'bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10'
+                  }`}
+                >
+                  {meetingCopied ? '✓ Copied!' : '📋 Copy'}
+                </button>
               </div>
             </div>
           </div>

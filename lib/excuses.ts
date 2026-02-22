@@ -260,6 +260,34 @@ export function formatForStandup(excuse: Excuse): string {
   return template(excuse);
 }
 
+// Meeting escape excuses - for when you need to leave a meeting
+export const meetingExcuses: string[] = [
+  "I have a hard stop — there's a production incident I need to look at",
+  "Sorry, I have to jump — there's a deploy that needs my approval",
+  "I need to drop off, my CI/CD pipeline is failing and blocking the team",
+  "Apologies, I have a conflict — need to join the security review",
+  "I have to go, my PR reviewer just went online and I need to pair",
+  "Sorry, my Docker containers are acting up and I need to check on them",
+  "I need to leave early — the staging server is down",
+  "Gotta run, there's a merge conflict I've been putting off all day",
+  "I have another meeting in 2 minutes, sorry!",
+  "Need to drop — the client is pinging me about a blocker",
+  "Sorry, my internet is getting unstable, let me reconnect... *leaves*",
+  "I just got paged — looks like an alert from production monitoring",
+  "Quick heads up, I have a 1:1 right after this I can't move",
+  "I need to go debug something before the end of day deadline",
+  "The load balancer is acting weird, I should probably check on that",
+  "My laptop is about to die and my charger is in the other room, brb never",
+  "I have a standup with the other team that just got moved to now",
+  "Need to bounce — Sprint planning starts in 3 minutes",
+  "Sorry, just got a Slack from my manager marked urgent",
+  "I have to jump, there's a hotfix that needs to go out ASAP",
+];
+
+export function getRandomMeetingExcuse(): string {
+  return meetingExcuses[Math.floor(Math.random() * meetingExcuses.length)];
+}
+
 // Search excuses by keyword
 export function searchExcuses(query: string, category?: Category): Excuse[] {
   const q = query.toLowerCase().trim();
