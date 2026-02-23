@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, type Category, type Excuse } from '@/lib/excuses';
+import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, generateBingoCard, checkBingo, type Category, type Excuse } from '@/lib/excuses';
 
 // Theme helpers
 function getTheme(): 'dark' | 'light' {
@@ -150,6 +150,11 @@ export default function Home() {
   const [meetingEscape, setMeetingEscape] = useState(false);
   const [meetingExcuse, setMeetingExcuse] = useState('');
   const [meetingCopied, setMeetingCopied] = useState(false);
+  const [showBingo, setShowBingo] = useState(false);
+  const [bingoCard, setBingoCard] = useState<(Excuse | null)[][]>([]);
+  const [bingoMarked, setBingoMarked] = useState<boolean[][]>(Array.from({length: 5}, (_, r) => Array.from({length: 5}, (_, c) => r === 2 && c === 2)));
+  const [bingoWon, setBingoWon] = useState(false);
+  const [bingoWinCells, setBingoWinCells] = useState<[number, number][]>([]);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -523,6 +528,25 @@ export default function Home() {
               🚪 Meeting Escape
             </button>
             <button
+              onClick={() => {
+                if (!showBingo) {
+                  const card = generateBingoCard();
+                  setBingoCard(card);
+                  setBingoMarked(Array.from({length: 5}, (_, r) => Array.from({length: 5}, (_, c) => r === 2 && c === 2)));
+                  setBingoWon(false);
+                  setBingoWinCells([]);
+                }
+                setShowBingo(!showBingo);
+              }}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showBingo
+                  ? 'bg-gradient-to-r from-yellow-500/20 to-green-500/20 text-yellow-300 border border-yellow-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              🎱 Excuse Bingo
+            </button>
+            <button
               onClick={() => { setShowSearch(!showSearch); if (showSearch) { setSearchQuery(''); setSearchResults([]); } }}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 showSearch
@@ -630,6 +654,86 @@ export default function Home() {
                   }`}
                 >
                   {meetingCopied ? '✓ Copied!' : '📋 Copy'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bingo Panel */}
+        {showBingo && bingoCard.length > 0 && (
+          <div className="w-full max-w-3xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-yellow-500/10 via-green-500/10 to-yellow-500/10 border border-yellow-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-yellow-500/20 text-yellow-300 text-xs font-semibold rounded-bl-lg">
+                🎱 EXCUSE BINGO
+              </div>
+              {bingoWon && (
+                <div className="mb-4 p-3 rounded-xl bg-green-500/20 border border-green-500/30 text-center">
+                  <p className="text-2xl font-bold text-green-400">🎉 BINGO! 🎉</p>
+                  <p className="text-sm text-green-300/70 mt-1">You've heard enough excuses for one meeting!</p>
+                </div>
+              )}
+              <p className="text-xs text-yellow-400/70 mb-3">Click excuses you've heard in your standup. Get 5 in a row for BINGO!</p>
+              <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+                {bingoCard.map((row, r) => row.map((cell, c) => {
+                  const isMarked = bingoMarked[r]?.[c];
+                  const isWinCell = bingoWinCells.some(([wr, wc]) => wr === r && wc === c);
+                  const isFree = r === 2 && c === 2;
+                  return (
+                    <button
+                      key={`${r}-${c}`}
+                      onClick={() => {
+                        if (isFree) return;
+                        const newMarked = bingoMarked.map(row => [...row]);
+                        newMarked[r][c] = !newMarked[r][c];
+                        setBingoMarked(newMarked);
+                        const { hasBingo, winningCells } = checkBingo(newMarked);
+                        if (hasBingo && !bingoWon) {
+                          setBingoWon(true);
+                          setBingoWinCells(winningCells);
+                          if (soundEnabled) playComboSound();
+                        } else if (!hasBingo) {
+                          setBingoWon(false);
+                          setBingoWinCells([]);
+                        }
+                      }}
+                      className={`aspect-square rounded-lg p-1 text-center flex flex-col items-center justify-center transition-all text-[10px] sm:text-xs leading-tight ${
+                        isFree
+                          ? 'bg-yellow-500/30 border border-yellow-500/40 text-yellow-300 font-bold cursor-default'
+                          : isWinCell
+                            ? 'bg-green-500/40 border-2 border-green-400 text-green-200 scale-105'
+                            : isMarked
+                              ? 'bg-violet-500/30 border border-violet-500/40 text-violet-200'
+                              : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
+                      }`}
+                    >
+                      {isFree ? (
+                        <>
+                          <span className="text-xl sm:text-2xl">⭐</span>
+                          <span>FREE</span>
+                        </>
+                      ) : cell ? (
+                        <>
+                          <span className="text-base sm:text-lg">{cell.emoji}</span>
+                          <span className="line-clamp-2">{cell.text.length > 30 ? cell.text.slice(0, 28) + '…' : cell.text}</span>
+                        </>
+                      ) : null}
+                    </button>
+                  );
+                }))}
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => {
+                    const card = generateBingoCard();
+                    setBingoCard(card);
+                    setBingoMarked(Array.from({length: 5}, (_, r) => Array.from({length: 5}, (_, c) => r === 2 && c === 2)));
+                    setBingoWon(false);
+                    setBingoWinCells([]);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 text-sm font-medium transition-all"
+                >
+                  🔄 New Card
                 </button>
               </div>
             </div>

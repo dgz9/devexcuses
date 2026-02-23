@@ -288,6 +288,41 @@ export function getRandomMeetingExcuse(): string {
   return meetingExcuses[Math.floor(Math.random() * meetingExcuses.length)];
 }
 
+// Generate a bingo card of 25 random excuses (5x5 grid, center is FREE)
+export function generateBingoCard(): (Excuse | null)[][] {
+  const shuffled = [...excuses].sort(() => Math.random() - 0.5).slice(0, 24);
+  const grid: (Excuse | null)[][] = [];
+  let idx = 0;
+  for (let row = 0; row < 5; row++) {
+    const r: (Excuse | null)[] = [];
+    for (let col = 0; col < 5; col++) {
+      if (row === 2 && col === 2) {
+        r.push(null); // FREE space
+      } else {
+        r.push(shuffled[idx++]);
+      }
+    }
+    grid.push(r);
+  }
+  return grid;
+}
+
+// Check if bingo is achieved (any row, column, or diagonal)
+export function checkBingo(marked: boolean[][]): { hasBingo: boolean; winningCells: [number, number][] } {
+  // Rows
+  for (let r = 0; r < 5; r++) {
+    if (marked[r].every(Boolean)) return { hasBingo: true, winningCells: marked[r].map((_, c) => [r, c] as [number, number]) };
+  }
+  // Columns
+  for (let c = 0; c < 5; c++) {
+    if (marked.every(row => row[c])) return { hasBingo: true, winningCells: marked.map((_, r) => [r, c] as [number, number]) };
+  }
+  // Diagonals
+  if ([0,1,2,3,4].every(i => marked[i][i])) return { hasBingo: true, winningCells: [0,1,2,3,4].map(i => [i, i] as [number, number]) };
+  if ([0,1,2,3,4].every(i => marked[i][4-i])) return { hasBingo: true, winningCells: [0,1,2,3,4].map(i => [i, 4-i] as [number, number]) };
+  return { hasBingo: false, winningCells: [] };
+}
+
 // Search excuses by keyword
 export function searchExcuses(query: string, category?: Category): Excuse[] {
   const q = query.toLowerCase().trim();
