@@ -108,6 +108,37 @@ function playComboSound() {
   }
 }
 
+// Rating helpers
+function getRatings(): Record<string, { up: number; down: number }> {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem('devexcuses-ratings') || '{}');
+  } catch { return {}; }
+}
+
+function saveRating(excuseText: string, isUp: boolean) {
+  const ratings = getRatings();
+  const key = excuseText;
+  if (!ratings[key]) ratings[key] = { up: 0, down: 0 };
+  if (isUp) ratings[key].up++;
+  else ratings[key].down++;
+  localStorage.setItem('devexcuses-ratings', JSON.stringify(ratings));
+  return ratings[key];
+}
+
+function getUserVotes(): Record<string, 'up' | 'down'> {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem('devexcuses-user-votes') || '{}');
+  } catch { return {}; }
+}
+
+function saveUserVote(excuseText: string, vote: 'up' | 'down') {
+  const votes = getUserVotes();
+  votes[excuseText] = vote;
+  localStorage.setItem('devexcuses-user-votes', JSON.stringify(votes));
+}
+
 // Favorites helpers
 function getFavorites(): Excuse[] {
   if (typeof window === 'undefined') return [];
@@ -155,6 +186,9 @@ export default function Home() {
   const [bingoMarked, setBingoMarked] = useState<boolean[][]>(Array.from({length: 5}, (_, r) => Array.from({length: 5}, (_, c) => r === 2 && c === 2)));
   const [bingoWon, setBingoWon] = useState(false);
   const [bingoWinCells, setBingoWinCells] = useState<[number, number][]>([]);
+  const [ratings, setRatings] = useState<Record<string, { up: number; down: number }>>({});
+  const [userVotes, setUserVotes] = useState<Record<string, 'up' | 'down'>>({});
+  const [rateAnimation, setRateAnimation] = useState<'up' | 'down' | null>(null);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -266,9 +300,11 @@ export default function Home() {
     }
   }, [excuse]);
 
-  // Load favorites from localStorage
+  // Load favorites and ratings from localStorage
   useEffect(() => {
     setFavorites(getFavorites());
+    setRatings(getRatings());
+    setUserVotes(getUserVotes());
   }, []);
 
   // Initialize theme and sound on mount
@@ -355,6 +391,18 @@ export default function Home() {
     setSearchResults([]);
     setShowSearch(false);
   }, []);
+
+  const rateExcuse = useCallback((isUp: boolean) => {
+    if (!excuse) return;
+    const currentVote = userVotes[excuse.text];
+    if (currentVote) return; // Already voted
+    const updated = saveRating(excuse.text, isUp);
+    saveUserVote(excuse.text, isUp ? 'up' : 'down');
+    setRatings(prev => ({ ...prev, [excuse.text]: updated }));
+    setUserVotes(prev => ({ ...prev, [excuse.text]: isUp ? 'up' : 'down' }));
+    setRateAnimation(isUp ? 'up' : 'down');
+    setTimeout(() => setRateAnimation(null), 600);
+  }, [excuse, userVotes]);
 
   // Check for shared excuse in URL on first load
   useEffect(() => {
@@ -977,6 +1025,37 @@ export default function Home() {
                   {'🔥'.repeat(excuse.spice)}
                   <span className="hidden sm:inline ml-1 text-xs opacity-75">{getSpiceLabel(excuse.spice)}</span>
                 </span>
+              </div>
+
+              {/* Rating */}
+              <div className="flex items-center justify-center gap-3 mt-4">
+                <span className="text-xs text-gray-500">Rate this excuse:</span>
+                <button
+                  onClick={() => rateExcuse(true)}
+                  disabled={!!userVotes[excuse.text]}
+                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm transition-all ${
+                    userVotes[excuse.text] === 'up'
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30 scale-110'
+                      : userVotes[excuse.text]
+                        ? 'bg-white/5 text-gray-600 border border-white/5 cursor-default'
+                        : 'bg-white/5 text-gray-400 hover:bg-green-500/10 hover:text-green-400 border border-white/10 hover:border-green-500/20'
+                  } ${rateAnimation === 'up' ? 'scale-125' : ''}`}
+                >
+                  👍 {ratings[excuse.text]?.up || 0}
+                </button>
+                <button
+                  onClick={() => rateExcuse(false)}
+                  disabled={!!userVotes[excuse.text]}
+                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm transition-all ${
+                    userVotes[excuse.text] === 'down'
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/30 scale-110'
+                      : userVotes[excuse.text]
+                        ? 'bg-white/5 text-gray-600 border border-white/5 cursor-default'
+                        : 'bg-white/5 text-gray-400 hover:bg-red-500/10 hover:text-red-400 border border-white/10 hover:border-red-500/20'
+                  } ${rateAnimation === 'down' ? 'scale-125' : ''}`}
+                >
+                  👎 {ratings[excuse.text]?.down || 0}
+                </button>
               </div>
             </div>
           ) : (
