@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, generateBingoCard, checkBingo, type Category, type Excuse } from '@/lib/excuses';
+import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, generateBingoCard, checkBingo, generateQuizQuestion, type Category, type Excuse, type QuizQuestion } from '@/lib/excuses';
 
 // Theme helpers
 function getTheme(): 'dark' | 'light' {
@@ -189,6 +189,11 @@ export default function Home() {
   const [ratings, setRatings] = useState<Record<string, { up: number; down: number }>>({});
   const [userVotes, setUserVotes] = useState<Record<string, 'up' | 'down'>>({});
   const [rateAnimation, setRateAnimation] = useState<'up' | 'down' | null>(null);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [quizQuestion, setQuizQuestion] = useState<QuizQuestion | null>(null);
+  const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
+  const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
+  const [quizStreak, setQuizStreak] = useState(0);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -595,6 +600,22 @@ export default function Home() {
               🎱 Excuse Bingo
             </button>
             <button
+              onClick={() => {
+                if (!showQuiz) {
+                  setQuizQuestion(generateQuizQuestion());
+                  setQuizAnswer(null);
+                }
+                setShowQuiz(!showQuiz);
+              }}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showQuiz
+                  ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 border border-green-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              🧠 Quiz {quizScore.total > 0 && <span className="text-xs">({quizScore.correct}/{quizScore.total})</span>}
+            </button>
+            <button
               onClick={() => { setShowSearch(!showSearch); if (showSearch) { setSearchQuery(''); setSearchResults([]); } }}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 showSearch
@@ -784,6 +805,89 @@ export default function Home() {
                   🔄 New Card
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Quiz Panel */}
+        {showQuiz && quizQuestion && (
+          <div className="w-full max-w-2xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-green-500/10 border border-green-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-green-500/20 text-green-300 text-xs font-semibold rounded-bl-lg">
+                🧠 EXCUSE QUIZ
+              </div>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs text-green-400/70">Guess the category of this excuse!</p>
+                <div className="flex items-center gap-3">
+                  {quizStreak >= 3 && (
+                    <span className="text-xs text-orange-400">🔥 {quizStreak} streak!</span>
+                  )}
+                  <span className="text-xs text-green-400/60">
+                    {quizScore.correct}/{quizScore.total} correct
+                    {quizScore.total > 0 && ` (${Math.round((quizScore.correct / quizScore.total) * 100)}%)`}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="p-4 rounded-xl bg-white/5 mb-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{quizQuestion.excuse.emoji}</span>
+                  <p className="text-lg font-medium text-white">"{quizQuestion.excuse.text}"</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {quizQuestion.options.map((cat, i) => {
+                  const catInfo = categories.find(c => c.id === cat);
+                  const isSelected = quizAnswer === i;
+                  const isCorrect = i === quizQuestion.correctIndex;
+                  const showResult = quizAnswer !== null;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        if (quizAnswer !== null) return;
+                        setQuizAnswer(i);
+                        const correct = i === quizQuestion.correctIndex;
+                        setQuizScore(prev => ({ correct: prev.correct + (correct ? 1 : 0), total: prev.total + 1 }));
+                        setQuizStreak(prev => correct ? prev + 1 : 0);
+                      }}
+                      className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                        showResult
+                          ? isCorrect
+                            ? 'bg-green-500/30 text-green-300 border border-green-500/40 scale-105'
+                            : isSelected
+                              ? 'bg-red-500/30 text-red-300 border border-red-500/40 scale-95'
+                              : 'bg-white/5 text-gray-500 border border-white/5'
+                          : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10 hover:border-green-500/30'
+                      }`}
+                    >
+                      {catInfo?.emoji} {catInfo?.label}
+                      {showResult && isCorrect && ' ✓'}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              {quizAnswer !== null && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setQuizQuestion(generateQuizQuestion());
+                      setQuizAnswer(null);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-300 text-sm font-medium transition-all"
+                  >
+                    🎲 Next Question
+                  </button>
+                  <button
+                    onClick={() => { setQuizScore({ correct: 0, total: 0 }); setQuizStreak(0); setQuizQuestion(generateQuizQuestion()); setQuizAnswer(null); }}
+                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-medium transition-all border border-white/10"
+                  >
+                    🔄 Reset
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

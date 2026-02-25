@@ -323,6 +323,22 @@ export function checkBingo(marked: boolean[][]): { hasBingo: boolean; winningCel
   return { hasBingo: false, winningCells: [] };
 }
 
+// Quiz: get a random excuse with wrong category options for guessing
+export interface QuizQuestion {
+  excuse: Excuse;
+  options: Category[];
+  correctIndex: number;
+}
+
+export function generateQuizQuestion(): QuizQuestion {
+  const excuse = excuses[Math.floor(Math.random() * excuses.length)];
+  const allCats: Category[] = ['frontend', 'backend', 'devops', 'management', 'universal'];
+  const wrongCats = allCats.filter(c => c !== excuse.category).sort(() => Math.random() - 0.5).slice(0, 3);
+  const options = [...wrongCats, excuse.category].sort(() => Math.random() - 0.5);
+  const correctIndex = options.indexOf(excuse.category);
+  return { excuse, options, correctIndex };
+}
+
 // Search excuses by keyword
 export function searchExcuses(query: string, category?: Category): Excuse[] {
   const q = query.toLowerCase().trim();
