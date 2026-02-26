@@ -139,6 +139,67 @@ function saveUserVote(excuseText: string, vote: 'up' | 'down') {
   localStorage.setItem('devexcuses-user-votes', JSON.stringify(votes));
 }
 
+// Stats tracking helpers
+interface ExcuseStats {
+  totalGenerated: number;
+  categoryBreakdown: Record<string, number>;
+  spiceBreakdown: Record<number, number>;
+  sessionsCount: number;
+  firstUsed: string;
+  lastUsed: string;
+  favoriteCount: number;
+  combosGenerated: number;
+  quizCorrect: number;
+  quizTotal: number;
+}
+
+function getExcuseStats(): ExcuseStats {
+  if (typeof window === 'undefined') return { totalGenerated: 0, categoryBreakdown: {}, spiceBreakdown: {}, sessionsCount: 0, firstUsed: '', lastUsed: '', favoriteCount: 0, combosGenerated: 0, quizCorrect: 0, quizTotal: 0 };
+  try {
+    return JSON.parse(localStorage.getItem('devexcuses-stats') || '{"totalGenerated":0,"categoryBreakdown":{},"spiceBreakdown":{},"sessionsCount":0,"firstUsed":"","lastUsed":"","favoriteCount":0,"combosGenerated":0,"quizCorrect":0,"quizTotal":0}');
+  } catch { return { totalGenerated: 0, categoryBreakdown: {}, spiceBreakdown: {}, sessionsCount: 0, firstUsed: '', lastUsed: '', favoriteCount: 0, combosGenerated: 0, quizCorrect: 0, quizTotal: 0 }; }
+}
+
+function trackExcuseGenerated(excuse: Excuse) {
+  const stats = getExcuseStats();
+  stats.totalGenerated++;
+  stats.categoryBreakdown[excuse.category] = (stats.categoryBreakdown[excuse.category] || 0) + 1;
+  stats.spiceBreakdown[excuse.spice] = (stats.spiceBreakdown[excuse.spice] || 0) + 1;
+  const now = new Date().toISOString();
+  if (!stats.firstUsed) stats.firstUsed = now;
+  stats.lastUsed = now;
+  localStorage.setItem('devexcuses-stats', JSON.stringify(stats));
+  return stats;
+}
+
+function trackComboGenerated() {
+  const stats = getExcuseStats();
+  stats.combosGenerated++;
+  localStorage.setItem('devexcuses-stats', JSON.stringify(stats));
+}
+
+function trackSession() {
+  const stats = getExcuseStats();
+  stats.sessionsCount++;
+  const now = new Date().toISOString();
+  if (!stats.firstUsed) stats.firstUsed = now;
+  stats.lastUsed = now;
+  localStorage.setItem('devexcuses-stats', JSON.stringify(stats));
+}
+
+function updateStatsFavoriteCount(count: number) {
+  const stats = getExcuseStats();
+  stats.favoriteCount = count;
+  localStorage.setItem('devexcuses-stats', JSON.stringify(stats));
+}
+
+function updateStatsQuiz(correct: number, total: number) {
+  const stats = getExcuseStats();
+  stats.quizCorrect = correct;
+  stats.quizTotal = total;
+  localStorage.setItem('devexcuses-stats', JSON.stringify(stats));
+}
+
 // Favorites helpers
 function getFavorites(): Excuse[] {
   if (typeof window === 'undefined') return [];
@@ -194,6 +255,8 @@ export default function Home() {
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
   const [quizStreak, setQuizStreak] = useState(0);
+  const [showStats, setShowStats] = useState(false);
+  const [excuseStats, setExcuseStats] = useState<ExcuseStats>({ totalGenerated: 0, categoryBreakdown: {}, spiceBreakdown: {}, sessionsCount: 0, firstUsed: '', lastUsed: '', favoriteCount: 0, combosGenerated: 0, quizCorrect: 0, quizTotal: 0 });
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -204,6 +267,7 @@ export default function Home() {
         if (prev) setHistory(h => [prev, ...h].slice(0, 25));
         return newExcuse;
       });
+      setExcuseStats(trackExcuseGenerated(newExcuse));
       if (soundEnabled) playExcuseSound(newExcuse.spice);
       setIsGenerating(false);
       setTimeout(() => setAnimateEmoji(false), 600);
@@ -238,6 +302,7 @@ export default function Home() {
       const [e1, e2] = getRandomComboExcuses();
       setComboExcuses([e1, e2]);
       setComboText(combineExcuses(e1, e2));
+      trackComboGenerated();
       if (soundEnabled) playComboSound();
       setIsGenerating(false);
       setTimeout(() => setAnimateEmoji(false), 600);
@@ -305,11 +370,13 @@ export default function Home() {
     }
   }, [excuse]);
 
-  // Load favorites and ratings from localStorage
+  // Load favorites, ratings, and stats from localStorage
   useEffect(() => {
     setFavorites(getFavorites());
     setRatings(getRatings());
     setUserVotes(getUserVotes());
+    setExcuseStats(getExcuseStats());
+    trackSession();
   }, []);
 
   // Initialize theme and sound on mount
@@ -616,6 +683,16 @@ export default function Home() {
               🧠 Quiz {quizScore.total > 0 && <span className="text-xs">({quizScore.correct}/{quizScore.total})</span>}
             </button>
             <button
+              onClick={() => setShowStats(!showStats)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showStats
+                  ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              📊 Stats
+            </button>
+            <button
               onClick={() => { setShowSearch(!showSearch); if (showSearch) { setSearchQuery(''); setSearchResults([]); } }}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 showSearch
@@ -885,6 +962,121 @@ export default function Home() {
                     className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-medium transition-all border border-white/10"
                   >
                     🔄 Reset
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Stats Dashboard */}
+        {showStats && (
+          <div className="w-full max-w-2xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-amber-500/10 border border-amber-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold rounded-bl-lg">
+                📊 YOUR STATS
+              </div>
+              
+              {/* Main Stats Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-violet-400">{excuseStats.totalGenerated}</div>
+                  <div className="text-xs text-gray-500 mt-1">Excuses Generated</div>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-pink-400">{favorites.length}</div>
+                  <div className="text-xs text-gray-500 mt-1">Favorites</div>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-cyan-400">{excuseStats.combosGenerated}</div>
+                  <div className="text-xs text-gray-500 mt-1">Combos Made</div>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-orange-400">{excuseStats.sessionsCount}</div>
+                  <div className="text-xs text-gray-500 mt-1">Sessions</div>
+                </div>
+              </div>
+
+              {/* Category Breakdown */}
+              {excuseStats.totalGenerated > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs text-amber-400/70 mb-2 font-medium">Category Breakdown</p>
+                  <div className="space-y-1.5">
+                    {categories.map(cat => {
+                      const count = excuseStats.categoryBreakdown[cat.id] || 0;
+                      if (count === 0) return null;
+                      const pct = Math.round((count / excuseStats.totalGenerated) * 100);
+                      return (
+                        <div key={cat.id} className="flex items-center gap-2">
+                          <span className="text-sm w-28 flex items-center gap-1.5 text-gray-400">
+                            {cat.emoji} {cat.label}
+                          </span>
+                          <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-violet-500/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs text-gray-500 w-14 text-right">{count} ({pct}%)</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Spice Distribution */}
+              {excuseStats.totalGenerated > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs text-amber-400/70 mb-2 font-medium">Spice Level Distribution</p>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map(spice => {
+                      const count = excuseStats.spiceBreakdown[spice] || 0;
+                      const pct = excuseStats.totalGenerated > 0 ? Math.round((count / excuseStats.totalGenerated) * 100) : 0;
+                      return (
+                        <div key={spice} className="flex-1 text-center">
+                          <div className="h-16 flex items-end justify-center mb-1">
+                            <div
+                              className={`w-full rounded-t transition-all ${
+                                spice >= 4 ? 'bg-red-500/50' : spice >= 3 ? 'bg-orange-500/50' : 'bg-green-500/50'
+                              }`}
+                              style={{ height: `${Math.max(pct, 4)}%` }}
+                            />
+                          </div>
+                          <span className="text-xs">{'🔥'.repeat(spice)}</span>
+                          <div className="text-[10px] text-gray-600">{count}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Quiz Stats */}
+              {quizScore.total > 0 && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                  <span className="text-2xl">🧠</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-white font-medium">Quiz Performance</p>
+                    <p className="text-xs text-gray-500">
+                      {quizScore.correct}/{quizScore.total} correct ({Math.round((quizScore.correct / quizScore.total) * 100)}%)
+                      {quizStreak >= 3 && <span className="text-orange-400 ml-2">🔥 {quizStreak} streak!</span>}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* First used / Member since */}
+              {excuseStats.firstUsed && (
+                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs text-gray-600">
+                  <span>Member since {new Date(excuseStats.firstUsed).toLocaleDateString()}</span>
+                  <button
+                    onClick={() => {
+                      if (confirm('Reset all stats? This cannot be undone.')) {
+                        localStorage.removeItem('devexcuses-stats');
+                        setExcuseStats(getExcuseStats());
+                      }
+                    }}
+                    className="text-gray-600 hover:text-red-400 transition-colors"
+                  >
+                    Reset Stats
                   </button>
                 </div>
               )}
