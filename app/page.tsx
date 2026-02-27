@@ -255,23 +255,34 @@ export default function Home() {
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
   const [quizStreak, setQuizStreak] = useState(0);
+  const [shuffleText, setShuffleText] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [excuseStats, setExcuseStats] = useState<ExcuseStats>({ totalGenerated: 0, categoryBreakdown: {}, spiceBreakdown: {}, sessionsCount: 0, firstUsed: '', lastUsed: '', favoriteCount: 0, combosGenerated: 0, quizCorrect: 0, quizTotal: 0 });
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
     setAnimateEmoji(true);
-    setTimeout(() => {
-      const newExcuse = getRandomExcuse(selectedCategory);
-      setExcuse(prev => {
-        if (prev) setHistory(h => [prev, ...h].slice(0, 25));
-        return newExcuse;
-      });
-      setExcuseStats(trackExcuseGenerated(newExcuse));
-      if (soundEnabled) playExcuseSound(newExcuse.spice);
-      setIsGenerating(false);
-      setTimeout(() => setAnimateEmoji(false), 600);
-    }, 200);
+    // Shuffle animation: cycle through random excuses before landing
+    const finalExcuse = getRandomExcuse(selectedCategory);
+    let count = 0;
+    const totalCycles = 6;
+    const shuffleInterval = setInterval(() => {
+      const preview = getRandomExcuse(selectedCategory);
+      setShuffleText(preview.text);
+      count++;
+      if (count >= totalCycles) {
+        clearInterval(shuffleInterval);
+        setShuffleText(null);
+        setExcuse(prev => {
+          if (prev) setHistory(h => [prev, ...h].slice(0, 25));
+          return finalExcuse;
+        });
+        setExcuseStats(trackExcuseGenerated(finalExcuse));
+        if (soundEnabled) playExcuseSound(finalExcuse.spice);
+        setIsGenerating(false);
+        setTimeout(() => setAnimateEmoji(false), 600);
+      }
+    }, 60);
   }, [selectedCategory, soundEnabled]);
 
   // Navigate history
@@ -1299,8 +1310,11 @@ export default function Home() {
               </span>
               
               <p className="text-2xl sm:text-3xl lg:text-4xl font-medium text-white mb-6 leading-tight">
-                "{excuse.text}"
+                "{shuffleText || excuse.text}"
               </p>
+              {shuffleText && (
+                <div className="text-xs text-violet-400/60 mb-2 animate-pulse">shuffling...</div>
+              )}
               
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${
