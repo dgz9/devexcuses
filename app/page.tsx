@@ -74,6 +74,27 @@ function playExcuseSound(spice: number) {
   }
 }
 
+// Confetti explosion for max spice excuses
+function launchConfetti() {
+  if (typeof window === 'undefined') return;
+  const emojis = ['🔥', '💥', '🌶️', '⚡', '✨', '🎉', '💀', '☠️'];
+  const container = document.body;
+  for (let i = 0; i < 30; i++) {
+    const el = document.createElement('span');
+    el.className = 'confetti-particle';
+    el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    el.style.left = `${40 + Math.random() * 20}vw`;
+    el.style.top = `${30 + Math.random() * 20}vh`;
+    el.style.setProperty('--drift', `${(Math.random() - 0.5) * 400}px`);
+    el.style.setProperty('--fall', `${200 + Math.random() * 400}px`);
+    el.style.setProperty('--spin', `${(Math.random() - 0.5) * 720}deg`);
+    el.style.setProperty('--duration', `${1 + Math.random() * 1.5}s`);
+    el.style.setProperty('--size', `${16 + Math.random() * 20}px`);
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  }
+}
+
 function playComboSound() {
   if (typeof window === 'undefined') return;
   try {
@@ -279,6 +300,7 @@ export default function Home() {
         });
         setExcuseStats(trackExcuseGenerated(finalExcuse));
         if (soundEnabled) playExcuseSound(finalExcuse.spice);
+        if (finalExcuse.spice >= 5) launchConfetti();
         setIsGenerating(false);
         setTimeout(() => setAnimateEmoji(false), 600);
       }

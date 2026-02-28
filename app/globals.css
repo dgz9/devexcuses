@@ -229,3 +229,23 @@ body {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* Confetti particle */
+.confetti-particle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 200;
+  animation: confettiFall var(--duration) ease-out forwards;
+  font-size: var(--size);
+}
+
+@keyframes confettiFall {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift), var(--fall)) rotate(var(--spin)) scale(0.3);
+  }
+}
