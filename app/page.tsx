@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, generateBingoCard, checkBingo, generateQuizQuestion, type Category, type Excuse, type QuizQuestion } from '@/lib/excuses';
 
 // Theme helpers
@@ -277,6 +277,9 @@ export default function Home() {
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
   const [quizStreak, setQuizStreak] = useState(0);
   const [shuffleText, setShuffleText] = useState<string | null>(null);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [autoRotateSpeed, setAutoRotateSpeed] = useState(5); // seconds
+  const autoRotateRef = useRef<NodeJS.Timeout | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [excuseStats, setExcuseStats] = useState<ExcuseStats>({ totalGenerated: 0, categoryBreakdown: {}, spiceBreakdown: {}, sessionsCount: 0, firstUsed: '', lastUsed: '', favoriteCount: 0, combosGenerated: 0, quizCorrect: 0, quizTotal: 0 });
 
@@ -402,6 +405,17 @@ export default function Home() {
       console.error('Failed to copy:', err);
     }
   }, [excuse]);
+
+  // Auto-rotate effect
+  useEffect(() => {
+    if (autoRotateRef.current) clearInterval(autoRotateRef.current);
+    if (autoRotate && !comboMode) {
+      autoRotateRef.current = setInterval(() => {
+        generateExcuse();
+      }, autoRotateSpeed * 1000);
+    }
+    return () => { if (autoRotateRef.current) clearInterval(autoRotateRef.current); };
+  }, [autoRotate, autoRotateSpeed, comboMode, generateExcuse]);
 
   // Load favorites, ratings, and stats from localStorage
   useEffect(() => {
@@ -670,6 +684,31 @@ export default function Home() {
             >
               🚨 Boss Mode
             </button>
+            <button
+              onClick={() => setAutoRotate(!autoRotate)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                autoRotate
+                  ? 'bg-gradient-to-r from-green-500/20 to-teal-500/20 text-green-300 border border-green-500/30 animate-pulse'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              {autoRotate ? '⏸️ Stop' : '▶️ Auto-Rotate'}
+            </button>
+            {autoRotate && (
+              <div className="inline-flex items-center gap-1 px-3 py-2 rounded-full bg-white/5 border border-white/10">
+                {[3, 5, 8, 12].map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setAutoRotateSpeed(s)}
+                    className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${
+                      autoRotateSpeed === s ? 'bg-green-500/30 text-green-300' : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    {s}s
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               onClick={() => { setMeetingEscape(!meetingEscape); if (!meetingEscape) setMeetingExcuse(getRandomMeetingExcuse()); }}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
