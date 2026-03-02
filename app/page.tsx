@@ -282,6 +282,12 @@ export default function Home() {
   const autoRotateRef = useRef<NodeJS.Timeout | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [excuseStats, setExcuseStats] = useState<ExcuseStats>({ totalGenerated: 0, categoryBreakdown: {}, spiceBreakdown: {}, sessionsCount: 0, firstUsed: '', lastUsed: '', favoriteCount: 0, combosGenerated: 0, quizCorrect: 0, quizTotal: 0 });
+  // Standup Timer
+  const [standupTimer, setStandupTimer] = useState(false);
+  const [standupSeconds, setStandupSeconds] = useState(30);
+  const [standupTimeLeft, setStandupTimeLeft] = useState(30);
+  const [standupRunning, setStandupRunning] = useState(false);
+  const standupTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -405,6 +411,25 @@ export default function Home() {
       console.error('Failed to copy:', err);
     }
   }, [excuse]);
+
+  // Standup timer effect
+  useEffect(() => {
+    if (standupTimerRef.current) clearInterval(standupTimerRef.current);
+    if (standupRunning && standupTimeLeft > 0) {
+      standupTimerRef.current = setInterval(() => {
+        setStandupTimeLeft(prev => {
+          if (prev <= 1) {
+            setStandupRunning(false);
+            generateExcuse();
+            if (soundEnabled) playComboSound();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => { if (standupTimerRef.current) clearInterval(standupTimerRef.current); };
+  }, [standupRunning, standupTimeLeft, generateExcuse, soundEnabled]);
 
   // Auto-rotate effect
   useEffect(() => {
@@ -710,6 +735,16 @@ export default function Home() {
               </div>
             )}
             <button
+              onClick={() => { setStandupTimer(!standupTimer); if (!standupTimer) { setStandupTimeLeft(standupSeconds); setStandupRunning(false); } else { setStandupRunning(false); } }}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                standupTimer
+                  ? 'bg-gradient-to-r from-rose-500/20 to-pink-500/20 text-rose-300 border border-rose-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              ⏱️ Standup Timer
+            </button>
+            <button
               onClick={() => { setMeetingEscape(!meetingEscape); if (!meetingEscape) setMeetingExcuse(getRandomMeetingExcuse()); }}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 meetingEscape
@@ -874,6 +909,91 @@ export default function Home() {
                   {meetingCopied ? '✓ Copied!' : '📋 Copy'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Standup Timer Panel */}
+        {standupTimer && (
+          <div className="w-full max-w-2xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500/10 via-pink-500/10 to-rose-500/10 border border-rose-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-rose-500/20 text-rose-300 text-xs font-semibold rounded-bl-lg">
+                ⏱️ STANDUP TIMER
+              </div>
+              <p className="text-xs text-rose-400/70 mb-4">Set a countdown — when it hits zero, a fresh excuse is auto-generated!</p>
+              
+              {/* Timer Display */}
+              <div className="flex items-center justify-center mb-5">
+                <div className={`relative w-32 h-32 rounded-full flex items-center justify-center border-4 transition-all ${
+                  standupRunning
+                    ? standupTimeLeft <= 5
+                      ? 'border-red-500 animate-pulse'
+                      : 'border-rose-400'
+                    : 'border-rose-500/30'
+                }`}>
+                  <span className={`text-4xl font-bold font-mono ${
+                    standupRunning && standupTimeLeft <= 5 ? 'text-red-400' : 'text-white'
+                  }`}>
+                    {standupTimeLeft}
+                  </span>
+                  <span className="absolute bottom-3 text-xs text-rose-400/60">seconds</span>
+                </div>
+              </div>
+
+              {/* Duration Presets */}
+              {!standupRunning && (
+                <div className="flex justify-center gap-2 mb-4">
+                  {[15, 30, 45, 60, 90].map(s => (
+                    <button
+                      key={s}
+                      onClick={() => { setStandupSeconds(s); setStandupTimeLeft(s); }}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        standupSeconds === s
+                          ? 'bg-rose-500/30 text-rose-300 border border-rose-500/40'
+                          : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+                      }`}
+                    >
+                      {s}s
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Controls */}
+              <div className="flex gap-2 justify-center">
+                {!standupRunning && standupTimeLeft > 0 ? (
+                  <button
+                    onClick={() => setStandupRunning(true)}
+                    className="flex-1 max-w-[200px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-rose-500/30 hover:bg-rose-500/40 text-rose-300 font-medium transition-all"
+                  >
+                    ▶️ Start
+                  </button>
+                ) : standupRunning ? (
+                  <button
+                    onClick={() => setStandupRunning(false)}
+                    className="flex-1 max-w-[200px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500/30 hover:bg-amber-500/40 text-amber-300 font-medium transition-all"
+                  >
+                    ⏸️ Pause
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { generateExcuse(); setStandupTimeLeft(standupSeconds); }}
+                    className="flex-1 max-w-[200px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-green-500/30 hover:bg-green-500/40 text-green-300 font-medium transition-all"
+                  >
+                    🎲 Again!
+                  </button>
+                )}
+                <button
+                  onClick={() => { setStandupTimeLeft(standupSeconds); setStandupRunning(false); }}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 font-medium transition-all border border-white/10"
+                >
+                  🔄 Reset
+                </button>
+              </div>
+              
+              {standupTimeLeft === 0 && !standupRunning && (
+                <p className="text-center text-sm text-rose-300 mt-3 animate-pulse">⏰ Time's up! Here's your excuse 👆</p>
+              )}
             </div>
           </div>
         )}
