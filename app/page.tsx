@@ -147,6 +147,92 @@ function saveRating(excuseText: string, isUp: boolean) {
   return ratings[key];
 }
 
+// Tone Rewriter - rewrite excuses in different tones
+type ToneStyle = 'corporate' | 'apologetic' | 'confident' | 'passive-aggressive';
+
+const toneLabels: Record<ToneStyle, { emoji: string; label: string }> = {
+  'corporate': { emoji: '👔', label: 'Corporate' },
+  'apologetic': { emoji: '😅', label: 'Apologetic' },
+  'confident': { emoji: '😎', label: 'Confident' },
+  'passive-aggressive': { emoji: '🙃', label: 'Passive-Aggressive' },
+};
+
+const toneRewrites: Record<ToneStyle, Record<string, string>> = {
+  'corporate': {
+    "It works on my machine": "The solution has been validated in the local development environment",
+    "It's a feature, not a bug": "This behavior aligns with the product's evolutionary roadmap",
+    "That's not a bug, it's undocumented behavior": "We've identified an opportunity to enhance our documentation coverage",
+    "Must be a caching issue": "We're investigating a potential data freshness concern",
+    "The tests passed locally": "All quality gates were green in the pre-deployment environment",
+    "It worked in staging": "The solution was successfully validated in our pre-production environment",
+    "DNS propagation": "We're experiencing expected latency in global DNS resolution",
+    "It's a race condition": "We've identified a temporal coupling concern in our distributed architecture",
+    "That's legacy code, we don't touch that": "That component is in a strategic maintenance-only lifecycle phase",
+    "The requirements changed": "We've pivoted based on evolving stakeholder feedback",
+    "That's outside the scope": "This falls outside our current sprint commitment boundaries",
+    "It's on the backlog": "This has been prioritized in our upcoming planning cycle",
+    "We need to refactor first": "We recommend a strategic technical debt reduction initiative first",
+    "The documentation is outdated": "Our knowledge base is undergoing a modernization effort",
+    "I thought you were handling that": "There appears to be an opportunity to improve our RACI matrix",
+  },
+  'apologetic': {
+    "It works on my machine": "I'm so sorry, it really did work on my machine, I promise...",
+    "It's a feature, not a bug": "I mean... I know it looks broken, and I'm sorry, but maybe it's kind of a feature?",
+    "Must be a caching issue": "I'm really sorry, I think it might be a cache thing? I should've checked...",
+    "The tests passed locally": "The tests passed for me, I swear! I'm so sorry they didn't for you...",
+    "It worked in staging": "It was working in staging, I feel terrible it broke in production...",
+    "That's legacy code, we don't touch that": "Sorry, I'd love to fix it but that code scares me honestly...",
+    "The requirements changed": "I'm sorry, I built what was asked last week but I guess things changed...",
+    "That's outside the scope": "I'm sorry, I don't think that was in the original ask? But maybe I missed it...",
+    "It's on the backlog": "I'm sorry it's not done yet, it's definitely on my list though!",
+    "The documentation is outdated": "I'm sorry, the docs led me astray, I should have double-checked...",
+    "I thought you were handling that": "Oh no, I'm so sorry! I genuinely thought you were on that one...",
+  },
+  'confident': {
+    "It works on my machine": "Works perfectly on my machine. Your setup needs fixing.",
+    "It's a feature, not a bug": "That IS the feature. You're welcome.",
+    "Must be a caching issue": "Clear your cache. Trust me, it's always the cache.",
+    "The tests passed locally": "Tests are green on my end. Ship it.",
+    "It worked in staging": "Staging was flawless. Production is a different beast entirely.",
+    "That's legacy code, we don't touch that": "Nobody touches that code. It's perfect the way it is.",
+    "The requirements changed": "I built exactly what was specified. Specs changed, not my code.",
+    "That's outside the scope": "Not in scope. Next.",
+    "It's on the backlog": "Already tracked and prioritized. I'm on top of it.",
+    "The documentation is outdated": "The code IS the documentation. Read it.",
+    "I thought you were handling that": "That was your task. Check the board.",
+  },
+  'passive-aggressive': {
+    "It works on my machine": "Well, it works on MY machine, so... 🤷",
+    "It's a feature, not a bug": "As I explained in the PR description that nobody read, it's a feature",
+    "Must be a caching issue": "Have you tried... clearing your cache? Just a thought 💅",
+    "The tests passed locally": "The tests passed when I ran them. Maybe try running them correctly?",
+    "It worked in staging": "It worked great in staging! But sure, let's blame my code 🙄",
+    "That's legacy code, we don't touch that": "Feel free to refactor it yourself! I'll watch 🍿",
+    "The requirements changed": "Oh, the requirements changed AGAIN? How refreshing and unexpected",
+    "That's outside the scope": "Per the scope doc that was shared three times... not my problem 📧",
+    "It's on the backlog": "It's on the backlog, right next to all the other things nobody prioritized",
+    "The documentation is outdated": "Interesting that nobody updated the docs. Truly a mystery 🕵️",
+    "I thought you were handling that": "Oh, were you NOT handling that? My mistake for assuming competence",
+  },
+};
+
+function rewriteInTone(excuseText: string, tone: ToneStyle): string {
+  // Check for exact match first
+  if (toneRewrites[tone][excuseText]) return toneRewrites[tone][excuseText];
+  
+  // Generic transforms if no specific rewrite exists
+  switch (tone) {
+    case 'corporate':
+      return `Per our analysis, ${excuseText.toLowerCase().replace(/^the /, '').replace(/^it's /, 'the situation is ')}. We'll circle back on this.`;
+    case 'apologetic':
+      return `I'm really sorry, but ${excuseText.toLowerCase()}... I'll look into it right away!`;
+    case 'confident':
+      return `${excuseText}. That's just how it is. Moving on.`;
+    case 'passive-aggressive':
+      return `Oh, ${excuseText.toLowerCase()}? What a surprise. Anyway... 🙃`;
+  }
+}
+
 function getUserVotes(): Record<string, 'up' | 'down'> {
   if (typeof window === 'undefined') return {};
   try {
@@ -282,6 +368,8 @@ export default function Home() {
   const autoRotateRef = useRef<NodeJS.Timeout | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [excuseStats, setExcuseStats] = useState<ExcuseStats>({ totalGenerated: 0, categoryBreakdown: {}, spiceBreakdown: {}, sessionsCount: 0, firstUsed: '', lastUsed: '', favoriteCount: 0, combosGenerated: 0, quizCorrect: 0, quizTotal: 0 });
+  // Tone Rewriter
+  const [activeTone, setActiveTone] = useState<ToneStyle | null>(null);
   // Standup Timer
   const [standupTimer, setStandupTimer] = useState(false);
   const [standupSeconds, setStandupSeconds] = useState(30);
@@ -1516,6 +1604,42 @@ export default function Home() {
                   {'🔥'.repeat(excuse.spice)}
                   <span className="hidden sm:inline ml-1 text-xs opacity-75">{getSpiceLabel(excuse.spice)}</span>
                 </span>
+              </div>
+
+              {/* Tone Rewriter */}
+              <div className="mt-5 pt-4 border-t border-white/5">
+                <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
+                  <span className="text-xs text-gray-500">Rewrite tone:</span>
+                  {(Object.keys(toneLabels) as ToneStyle[]).map(tone => (
+                    <button
+                      key={tone}
+                      onClick={() => setActiveTone(activeTone === tone ? null : tone)}
+                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                        activeTone === tone
+                          ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30 scale-105'
+                          : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+                      }`}
+                    >
+                      {toneLabels[tone].emoji} {toneLabels[tone].label}
+                    </button>
+                  ))}
+                </div>
+                {activeTone && (
+                  <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 excuse-enter">
+                    <p className="text-xs text-violet-400/70 mb-1">{toneLabels[activeTone].emoji} {toneLabels[activeTone].label} version:</p>
+                    <p className="text-sm text-white italic">"{rewriteInTone(excuse.text, activeTone)}"</p>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(rewriteInTone(excuse.text, activeTone));
+                        } catch {}
+                      }}
+                      className="mt-2 text-xs text-violet-400/60 hover:text-violet-300 transition-colors"
+                    >
+                      📋 Copy rewrite
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Rating */}
