@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, generateBingoCard, checkBingo, generateQuizQuestion, type Category, type Excuse, type QuizQuestion } from '@/lib/excuses';
+import { excuses, getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, generateBingoCard, checkBingo, generateQuizQuestion, type Category, type Excuse, type QuizQuestion } from '@/lib/excuses';
 
 // Theme helpers
 function getTheme(): 'dark' | 'light' {
@@ -370,6 +370,11 @@ export default function Home() {
   const [excuseStats, setExcuseStats] = useState<ExcuseStats>({ totalGenerated: 0, categoryBreakdown: {}, spiceBreakdown: {}, sessionsCount: 0, firstUsed: '', lastUsed: '', favoriteCount: 0, combosGenerated: 0, quizCorrect: 0, quizTotal: 0 });
   // Tone Rewriter
   const [activeTone, setActiveTone] = useState<ToneStyle | null>(null);
+  // Excuse Gallery
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryCategory, setGalleryCategory] = useState<Category | undefined>(undefined);
+  const [gallerySpice, setGallerySpice] = useState<number | undefined>(undefined);
+  const [gallerySortBy, setGallerySortBy] = useState<'default' | 'spice-asc' | 'spice-desc'>('default');
   // Standup Timer
   const [standupTimer, setStandupTimer] = useState(false);
   const [standupSeconds, setStandupSeconds] = useState(30);
@@ -886,6 +891,16 @@ export default function Home() {
               }`}
             >
               📊 Stats
+            </button>
+            <button
+              onClick={() => setShowGallery(!showGallery)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showGallery
+                  ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-300 border border-indigo-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              🗂️ Gallery
             </button>
             <button
               onClick={() => { setShowSearch(!showSearch); if (showSearch) { setSearchQuery(''); setSearchResults([]); } }}
@@ -1508,6 +1523,102 @@ export default function Home() {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Excuse Gallery */}
+        {showGallery && (
+          <div className="w-full max-w-4xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 border border-indigo-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-indigo-500/20 text-indigo-300 text-xs font-semibold rounded-bl-lg">
+                🗂️ EXCUSE GALLERY
+              </div>
+              <p className="text-xs text-indigo-400/70 mb-4">Browse all {excuses.length} excuses. Click any to use it!</p>
+              
+              {/* Filters */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={() => setGalleryCategory(undefined)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    !galleryCategory ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-500/40' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+                  }`}
+                >
+                  All
+                </button>
+                {categories.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setGalleryCategory(galleryCategory === cat.id ? undefined : cat.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      galleryCategory === cat.id ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-500/40' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+                    }`}
+                  >
+                    {cat.emoji} {cat.label}
+                  </button>
+                ))}
+                <span className="text-gray-600 mx-1">|</span>
+                {[1, 2, 3, 4, 5].map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setGallerySpice(gallerySpice === s ? undefined : s)}
+                    className={`px-2 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      gallerySpice === s ? 'bg-red-500/30 text-red-300 border border-red-500/40' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+                    }`}
+                  >
+                    {'🔥'.repeat(s)}
+                  </button>
+                ))}
+                <span className="text-gray-600 mx-1">|</span>
+                <button
+                  onClick={() => setGallerySortBy(gallerySortBy === 'spice-desc' ? 'spice-asc' : gallerySortBy === 'spice-asc' ? 'default' : 'spice-desc')}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10 transition-all"
+                >
+                  {gallerySortBy === 'default' ? '🔀 Default' : gallerySortBy === 'spice-desc' ? '🔥↓ Spiciest' : '🔥↑ Mildest'}
+                </button>
+              </div>
+              
+              {/* Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-96 overflow-y-auto pr-1">
+                {(() => {
+                  let filtered = excuses.filter(e => {
+                    if (galleryCategory && e.category !== galleryCategory) return false;
+                    if (gallerySpice && e.spice !== gallerySpice) return false;
+                    return true;
+                  });
+                  if (gallerySortBy === 'spice-desc') filtered = [...filtered].sort((a, b) => b.spice - a.spice);
+                  else if (gallerySortBy === 'spice-asc') filtered = [...filtered].sort((a, b) => a.spice - b.spice);
+                  return filtered.map((e, i) => {
+                    const isFav = favorites.some(f => f.text === e.text);
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => { setExcuse(e); setShowGallery(false); }}
+                        className="flex items-start gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-left group"
+                      >
+                        <span className="text-xl flex-shrink-0 group-hover:scale-110 transition-transform">{e.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-xs leading-snug truncate">"{e.text}"</p>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="text-[10px] text-gray-600">{'🔥'.repeat(e.spice)}</span>
+                            {isFav && <span className="text-[10px]">❤️</span>}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+              <div className="mt-3 text-xs text-gray-600 text-center">
+                {(() => {
+                  const count = excuses.filter(e => {
+                    if (galleryCategory && e.category !== galleryCategory) return false;
+                    if (gallerySpice && e.spice !== gallerySpice) return false;
+                    return true;
+                  }).length;
+                  return `Showing ${count} of ${excuses.length} excuses`;
+                })()}
+              </div>
             </div>
           </div>
         )}
