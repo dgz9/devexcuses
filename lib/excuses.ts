@@ -339,6 +339,51 @@ export function generateQuizQuestion(): QuizQuestion {
   return { excuse, options, correctIndex };
 }
 
+// Scenario system - pick a work situation and get tailored excuses
+export interface Scenario {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  keywords: string[];
+  categories: Category[];
+  spiceRange: [number, number]; // [min, max] spice
+}
+
+export const scenarios: Scenario[] = [
+  { id: 'standup', name: 'Daily Standup', emoji: '🧑‍💼', description: "When you didn't finish yesterday's task", keywords: ['blocker', 'blocked', 'ramp', 'investigating', 'still', 'backlog', 'sprint', 'pr', 'review'], categories: ['universal', 'management'], spiceRange: [1, 3] },
+  { id: 'code-review', name: 'Code Review', emoji: '👀', description: "Defending your questionable PR", keywords: ['works', 'feature', 'legacy', 'refactor', 'technically', 'documentation', 'tests'], categories: ['universal', 'frontend', 'backend'], spiceRange: [2, 4] },
+  { id: 'prod-incident', name: 'Production Incident', emoji: '🚨', description: "Something broke in prod", keywords: ['production', 'staging', 'cache', 'deploy', 'pipeline', 'container', 'down', 'crashed', 'certificate', 'dns', 'health', 'load', 'memory'], categories: ['devops', 'backend', 'universal'], spiceRange: [1, 5] },
+  { id: 'missed-deadline', name: 'Missed Deadline', emoji: '⏰', description: "The sprint ended but your ticket didn't", keywords: ['timeline', 'scope', 'requirements', 'changed', 'backlog', 'sprint', 'velocity', 'resource', 'phase', 'roadmap', 'priority', 'q4'], categories: ['management', 'universal'], spiceRange: [2, 4] },
+  { id: 'demo-day', name: 'Demo Day', emoji: '🎪', description: "The feature doesn't work for the demo", keywords: ['works', 'machine', 'staging', 'feature', 'cache', 'locally'], categories: ['universal', 'frontend'], spiceRange: [2, 5] },
+  { id: 'client-call', name: 'Client Call', emoji: '📞', description: "Explaining delays to the client", keywords: ['scope', 'timeline', 'requirements', 'phase', 'roadmap', 'discovery', 'stakeholder', 'mvp', 'circle', 'offline'], categories: ['management'], spiceRange: [1, 3] },
+  { id: 'onboarding', name: 'First Week', emoji: '🆕', description: "When you're new and everything's confusing", keywords: ['ramp', 'legacy', 'documentation', 'outdated', 'previous', 'codebase'], categories: ['universal'], spiceRange: [1, 3] },
+  { id: 'friday-deploy', name: 'Friday Deploy', emoji: '🍻', description: "You deployed on a Friday and regret it", keywords: ['deploy', 'production', 'pipeline', 'rollback', 'cache', 'container', 'secrets', 'certificate'], categories: ['devops', 'universal'], spiceRange: [3, 5] },
+];
+
+export function getExcusesForScenario(scenario: Scenario): Excuse[] {
+  return excuses.filter(e => {
+    // Must match category
+    if (!scenario.categories.includes(e.category)) return false;
+    // Must be in spice range
+    if (e.spice < scenario.spiceRange[0] || e.spice > scenario.spiceRange[1]) return false;
+    // Bonus: check keyword relevance
+    const textLower = e.text.toLowerCase();
+    const keywordMatch = scenario.keywords.some(kw => textLower.includes(kw));
+    return keywordMatch;
+  });
+}
+
+export function getRandomExcuseForScenario(scenario: Scenario): Excuse {
+  const matched = getExcusesForScenario(scenario);
+  if (matched.length === 0) {
+    // Fallback: just filter by category
+    const fallback = excuses.filter(e => scenario.categories.includes(e.category));
+    return fallback[Math.floor(Math.random() * fallback.length)];
+  }
+  return matched[Math.floor(Math.random() * matched.length)];
+}
+
 // Search excuses by keyword
 export function searchExcuses(query: string, category?: Category): Excuse[] {
   const q = query.toLowerCase().trim();

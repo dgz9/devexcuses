@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { excuses, getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, generateBingoCard, checkBingo, generateQuizQuestion, type Category, type Excuse, type QuizQuestion } from '@/lib/excuses';
+import { excuses, getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, generateBingoCard, checkBingo, generateQuizQuestion, scenarios, getRandomExcuseForScenario, getExcusesForScenario, type Category, type Excuse, type QuizQuestion, type Scenario } from '@/lib/excuses';
 
 // Theme helpers
 function getTheme(): 'dark' | 'light' {
@@ -381,6 +381,10 @@ export default function Home() {
   const [standupTimeLeft, setStandupTimeLeft] = useState(30);
   const [standupRunning, setStandupRunning] = useState(false);
   const standupTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Scenario Picker
+  const [showScenarios, setShowScenarios] = useState(false);
+  const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
+  const [scenarioExcuses, setScenarioExcuses] = useState<Excuse[]>([]);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -901,6 +905,16 @@ export default function Home() {
               }`}
             >
               🗂️ Gallery
+            </button>
+            <button
+              onClick={() => { setShowScenarios(!showScenarios); setActiveScenario(null); setScenarioExcuses([]); }}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showScenarios
+                  ? 'bg-gradient-to-r from-sky-500/20 to-blue-500/20 text-sky-300 border border-sky-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              🎭 Scenarios
             </button>
             <button
               onClick={() => { setShowSearch(!showSearch); if (showSearch) { setSearchQuery(''); setSearchResults([]); } }}
@@ -1619,6 +1633,90 @@ export default function Home() {
                   return `Showing ${count} of ${excuses.length} excuses`;
                 })()}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Scenario Picker */}
+        {showScenarios && (
+          <div className="w-full max-w-3xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-sky-500/10 via-blue-500/10 to-sky-500/10 border border-sky-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-sky-500/20 text-sky-300 text-xs font-semibold rounded-bl-lg">
+                🎭 SCENARIO PICKER
+              </div>
+              <p className="text-xs text-sky-400/70 mb-4">Pick a work situation and get the perfect excuse for it!</p>
+              
+              {!activeScenario ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {scenarios.map((scenario) => (
+                    <button
+                      key={scenario.id}
+                      onClick={() => {
+                        setActiveScenario(scenario);
+                        setScenarioExcuses(getExcusesForScenario(scenario));
+                        const excuse = getRandomExcuseForScenario(scenario);
+                        setExcuse(excuse);
+                        if (soundEnabled) playExcuseSound(excuse.spice);
+                      }}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-sky-500/10 hover:border-sky-500/30 transition-all group"
+                    >
+                      <span className="text-2xl group-hover:scale-110 transition-transform">{scenario.emoji}</span>
+                      <span className="text-sm font-medium text-white">{scenario.name}</span>
+                      <span className="text-[10px] text-gray-500 text-center leading-tight">{scenario.description}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{activeScenario.emoji}</span>
+                      <div>
+                        <h3 className="text-white font-semibold">{activeScenario.name}</h3>
+                        <p className="text-xs text-gray-400">{activeScenario.description} • {scenarioExcuses.length} excuses available</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setActiveScenario(null); setScenarioExcuses([]); }}
+                      className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 text-sm transition-all"
+                    >
+                      ← Back
+                    </button>
+                  </div>
+                  <div className="space-y-2 max-h-52 overflow-y-auto mb-4">
+                    {scenarioExcuses.map((e, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setExcuse(e);
+                          if (soundEnabled) playExcuseSound(e.spice);
+                          if (e.spice >= 5) launchConfetti();
+                        }}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left group ${
+                          excuse?.text === e.text ? 'bg-sky-500/20 border border-sky-500/30' : 'bg-white/5 hover:bg-white/10'
+                        }`}
+                      >
+                        <span className="text-xl group-hover:scale-110 transition-transform flex-shrink-0">{e.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm truncate">"{e.text}"</p>
+                          <span className="text-[10px] text-gray-600">{'🔥'.repeat(e.spice)}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => {
+                      const e = getRandomExcuseForScenario(activeScenario);
+                      setExcuse(e);
+                      if (soundEnabled) playExcuseSound(e.spice);
+                      if (e.spice >= 5) launchConfetti();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 font-medium text-sm transition-all"
+                  >
+                    🎲 Random for this scenario
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
