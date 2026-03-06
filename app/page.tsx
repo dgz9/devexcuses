@@ -307,6 +307,44 @@ function updateStatsQuiz(correct: number, total: number) {
   localStorage.setItem('devexcuses-stats', JSON.stringify(stats));
 }
 
+// Visit Streak helpers
+interface VisitStreak {
+  currentStreak: number;
+  longestStreak: number;
+  lastVisitDate: string;
+}
+
+function getVisitStreak(): VisitStreak {
+  if (typeof window === 'undefined') return { currentStreak: 0, longestStreak: 0, lastVisitDate: '' };
+  try {
+    return JSON.parse(localStorage.getItem('devexcuses-visit-streak') || '{"currentStreak":0,"longestStreak":0,"lastVisitDate":""}');
+  } catch { return { currentStreak: 0, longestStreak: 0, lastVisitDate: '' }; }
+}
+
+function updateVisitStreak(): VisitStreak {
+  const today = new Date().toISOString().split('T')[0];
+  const data = getVisitStreak();
+  
+  if (data.lastVisitDate === today) return data; // Already visited today
+  
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  
+  let newStreak = 1;
+  if (data.lastVisitDate === yesterdayStr) {
+    newStreak = data.currentStreak + 1;
+  }
+  
+  const updated: VisitStreak = {
+    currentStreak: newStreak,
+    lastVisitDate: today,
+    longestStreak: Math.max(data.longestStreak, newStreak),
+  };
+  localStorage.setItem('devexcuses-visit-streak', JSON.stringify(updated));
+  return updated;
+}
+
 // Favorites helpers
 function getFavorites(): Excuse[] {
   if (typeof window === 'undefined') return [];
@@ -385,6 +423,9 @@ export default function Home() {
   const [showScenarios, setShowScenarios] = useState(false);
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
   const [scenarioExcuses, setScenarioExcuses] = useState<Excuse[]>([]);
+  // Visit Streak
+  const [visitStreak, setVisitStreak] = useState<VisitStreak>({ currentStreak: 0, longestStreak: 0, lastVisitDate: '' });
+  const [showStreakBump, setShowStreakBump] = useState(false);
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -546,6 +587,14 @@ export default function Home() {
     setUserVotes(getUserVotes());
     setExcuseStats(getExcuseStats());
     trackSession();
+    // Update visit streak
+    const oldStreak = getVisitStreak();
+    const newStreak = updateVisitStreak();
+    setVisitStreak(newStreak);
+    if (newStreak.currentStreak > oldStreak.currentStreak && newStreak.currentStreak > 1) {
+      setShowStreakBump(true);
+      setTimeout(() => setShowStreakBump(false), 3000);
+    }
   }, []);
 
   // Initialize theme and sound on mount
@@ -750,6 +799,16 @@ export default function Home() {
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               <span className="text-sm text-gray-400">120+ excuses and counting</span>
             </div>
+            {visitStreak.currentStreak > 0 && (
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showStreakBump
+                  ? 'bg-gradient-to-r from-orange-500/30 to-red-500/30 text-orange-300 border border-orange-500/40 scale-110'
+                  : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+              }`} title={`Longest streak: ${visitStreak.longestStreak} day${visitStreak.longestStreak !== 1 ? 's' : ''}`}>
+                🔥 {visitStreak.currentStreak} day{visitStreak.currentStreak !== 1 ? 's' : ''} streak
+                {showStreakBump && <span className="animate-bounce">🎉</span>}
+              </div>
+            )}
             <button
               onClick={() => setShowDaily(!showDaily)}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
