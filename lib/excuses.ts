@@ -178,6 +178,14 @@ export function getDailyExcuse(): Excuse {
   return excuses[index];
 }
 
+export function getExcuseForDate(date: Date): Excuse {
+  const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
+  const year = date.getFullYear();
+  const seed = dayOfYear * 31 + year;
+  const index = seed % excuses.length;
+  return excuses[index];
+}
+
 // Get the next excuse in line for tomorrow
 export function getTomorrowsExcuse(): Excuse {
   const tomorrow = new Date();

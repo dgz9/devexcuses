@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { excuses, getRandomExcuse, getDailyExcuse, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, generateBingoCard, checkBingo, generateQuizQuestion, scenarios, getRandomExcuseForScenario, getExcusesForScenario, type Category, type Excuse, type QuizQuestion, type Scenario } from '@/lib/excuses';
+import { excuses, getRandomExcuse, getDailyExcuse, getExcuseForDate, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, generateBingoCard, checkBingo, generateQuizQuestion, scenarios, getRandomExcuseForScenario, getExcusesForScenario, type Category, type Excuse, type QuizQuestion, type Scenario } from '@/lib/excuses';
 
 // Theme helpers
 function getTheme(): 'dark' | 'light' {
@@ -426,6 +426,10 @@ export default function Home() {
   // Visit Streak
   const [visitStreak, setVisitStreak] = useState<VisitStreak>({ currentStreak: 0, longestStreak: 0, lastVisitDate: '' });
   const [showStreakBump, setShowStreakBump] = useState(false);
+  // Excuse Calendar
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date().getMonth());
+  const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
 
   const generateExcuse = useCallback(() => {
     setIsGenerating(true);
@@ -976,6 +980,16 @@ export default function Home() {
               🎭 Scenarios
             </button>
             <button
+              onClick={() => setShowCalendar(!showCalendar)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showCalendar
+                  ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              📆 Calendar
+            </button>
+            <button
               onClick={() => { setShowSearch(!showSearch); if (showSearch) { setSearchQuery(''); setSearchResults([]); } }}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 showSearch
@@ -1083,6 +1097,105 @@ export default function Home() {
                   }`}
                 >
                   {meetingCopied ? '✓ Copied!' : '📋 Copy'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Excuse Calendar Panel */}
+        {showCalendar && (
+          <div className="w-full max-w-2xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/10 border border-emerald-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-semibold rounded-bl-lg">
+                📆 EXCUSE CALENDAR
+              </div>
+              <p className="text-xs text-emerald-400/70 mb-4">Browse the daily excuse for any date — past or future!</p>
+              
+              {/* Month Navigation */}
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => {
+                    if (calendarMonth === 0) { setCalendarMonth(11); setCalendarYear(y => y - 1); }
+                    else setCalendarMonth(m => m - 1);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition-all"
+                >
+                  ◀
+                </button>
+                <span className="text-white font-semibold">
+                  {new Date(calendarYear, calendarMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </span>
+                <button
+                  onClick={() => {
+                    if (calendarMonth === 11) { setCalendarMonth(0); setCalendarYear(y => y + 1); }
+                    else setCalendarMonth(m => m + 1);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition-all"
+                >
+                  ▶
+                </button>
+              </div>
+
+              {/* Day Headers */}
+              <div className="grid grid-cols-7 gap-1 mb-1">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                  <div key={d} className="text-center text-xs text-gray-500 py-1">{d}</div>
+                ))}
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-1">
+                {(() => {
+                  const firstDay = new Date(calendarYear, calendarMonth, 1).getDay();
+                  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+                  const today = new Date();
+                  const todayStr = today.toISOString().split('T')[0];
+                  const cells = [];
+                  
+                  // Empty cells before first day
+                  for (let i = 0; i < firstDay; i++) {
+                    cells.push(<div key={`empty-${i}`} />);
+                  }
+                  
+                  for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(calendarYear, calendarMonth, day);
+                    const dateStr = date.toISOString().split('T')[0];
+                    const excuseForDay = getExcuseForDate(date);
+                    const isToday = dateStr === todayStr;
+                    
+                    cells.push(
+                      <div
+                        key={day}
+                        className={`group relative aspect-square rounded-lg flex flex-col items-center justify-center cursor-default transition-all ${
+                          isToday
+                            ? 'bg-emerald-500/30 border border-emerald-500/40 ring-1 ring-emerald-400/50'
+                            : 'bg-white/5 hover:bg-white/10 border border-white/5'
+                        }`}
+                        title={`${dateStr}: "${excuseForDay.text}"`}
+                      >
+                        <span className={`text-xs font-medium ${isToday ? 'text-emerald-300' : 'text-gray-400'}`}>{day}</span>
+                        <span className="text-sm">{excuseForDay.emoji}</span>
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 max-w-[220px]">
+                          <p className="truncate font-medium">"{excuseForDay.text}"</p>
+                          <p className="text-gray-500 mt-0.5">{getSpiceLabel(excuseForDay.spice)} · {excuseForDay.category}</p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  return cells;
+                })()}
+              </div>
+
+              {/* Quick jump to today */}
+              <div className="flex justify-center mt-3">
+                <button
+                  onClick={() => { setCalendarMonth(new Date().getMonth()); setCalendarYear(new Date().getFullYear()); }}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-medium transition-all"
+                >
+                  📍 Today
                 </button>
               </div>
             </div>
