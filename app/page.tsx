@@ -426,6 +426,11 @@ export default function Home() {
   // Visit Streak
   const [visitStreak, setVisitStreak] = useState<VisitStreak>({ currentStreak: 0, longestStreak: 0, lastVisitDate: '' });
   const [showStreakBump, setShowStreakBump] = useState(false);
+  // Excuse Dare
+  const [showDare, setShowDare] = useState(false);
+  const [dareAccepted, setDareAccepted] = useState(false);
+  const [daresCompleted, setDaresCompleted] = useState(0);
+  const [dareConfetti, setDareConfetti] = useState(false);
   // Excuse Calendar
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date().getMonth());
@@ -591,6 +596,8 @@ export default function Home() {
     setUserVotes(getUserVotes());
     setExcuseStats(getExcuseStats());
     trackSession();
+    // Load dares completed
+    try { setDaresCompleted(parseInt(localStorage.getItem('devexcuses-dares-completed') || '0', 10)); } catch {}
     // Update visit streak
     const oldStreak = getVisitStreak();
     const newStreak = updateVisitStreak();
@@ -990,6 +997,16 @@ export default function Home() {
               📆 Calendar
             </button>
             <button
+              onClick={() => { setShowDare(!showDare); setDareAccepted(false); }}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showDare
+                  ? 'bg-gradient-to-r from-red-500/20 to-orange-500/20 text-red-300 border border-red-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              🎯 Dare {daresCompleted > 0 && <span className="text-xs">({daresCompleted})</span>}
+            </button>
+            <button
               onClick={() => { setShowSearch(!showSearch); if (showSearch) { setSearchQuery(''); setSearchResults([]); } }}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 showSearch
@@ -1198,6 +1215,92 @@ export default function Home() {
                   📍 Today
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Excuse Dare Panel */}
+        {showDare && excuse && (
+          <div className="w-full max-w-2xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-500/10 via-orange-500/10 to-red-500/10 border border-red-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-red-500/20 text-red-300 text-xs font-semibold rounded-bl-lg">
+                🎯 EXCUSE DARE
+              </div>
+              <p className="text-xs text-red-400/70 mb-4">I dare you to actually use this excuse in your next standup, PR review, or Slack message!</p>
+              
+              <div className="p-4 rounded-xl bg-white/5 mb-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-3xl">{excuse.emoji}</span>
+                  <p className="text-lg font-medium text-white">"{excuse.text}"</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    excuse.spice >= 4 ? 'bg-red-500/20 text-red-400' : excuse.spice >= 3 ? 'bg-orange-500/20 text-orange-400' : 'bg-green-500/20 text-green-400'
+                  }`}>
+                    Difficulty: {'🔥'.repeat(excuse.spice)} {excuse.spice >= 4 ? 'LEGENDARY' : excuse.spice >= 3 ? 'HARD' : excuse.spice >= 2 ? 'MEDIUM' : 'EASY'}
+                  </span>
+                </div>
+              </div>
+
+              {!dareAccepted ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDareAccepted(true)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-red-500/30 to-orange-500/30 hover:from-red-500/40 hover:to-orange-500/40 text-white font-semibold transition-all text-lg"
+                  >
+                    🎯 I Accept the Dare!
+                  </button>
+                  <button
+                    onClick={() => { generateExcuse(); setDareAccepted(false); }}
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 transition-all border border-white/10"
+                  >
+                    🎲 Too scary, new one
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
+                    <p className="text-amber-300 font-bold text-lg">⚡ DARE ACCEPTED! ⚡</p>
+                    <p className="text-amber-400/70 text-xs mt-1">Use this excuse at your next opportunity. Then come back and claim your glory!</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newCount = daresCompleted + 1;
+                      setDaresCompleted(newCount);
+                      localStorage.setItem('devexcuses-dares-completed', String(newCount));
+                      setDareConfetti(true);
+                      launchConfetti();
+                      if (soundEnabled) playComboSound();
+                      setTimeout(() => setDareConfetti(false), 3000);
+                      setDareAccepted(false);
+                    }}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-green-500/30 to-emerald-500/30 hover:from-green-500/40 hover:to-emerald-500/40 text-green-300 font-bold transition-all ${dareConfetti ? 'scale-110' : ''}`}
+                  >
+                    ✅ I Actually Used It! (+1 Legend Point)
+                  </button>
+                </div>
+              )}
+
+              {daresCompleted > 0 && (
+                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🏆</span>
+                    <div>
+                      <span className="text-white font-bold">{daresCompleted}</span>
+                      <span className="text-gray-400 text-sm ml-1">dare{daresCompleted !== 1 ? 's' : ''} completed</span>
+                    </div>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    daresCompleted >= 50 ? 'bg-yellow-500/20 text-yellow-400' :
+                    daresCompleted >= 25 ? 'bg-purple-500/20 text-purple-400' :
+                    daresCompleted >= 10 ? 'bg-blue-500/20 text-blue-400' :
+                    daresCompleted >= 5 ? 'bg-green-500/20 text-green-400' :
+                    'bg-white/5 text-gray-400'
+                  }`}>
+                    {daresCompleted >= 50 ? '👑 Excuse Legend' : daresCompleted >= 25 ? '🦸 Dare Master' : daresCompleted >= 10 ? '💪 Brave Soul' : daresCompleted >= 5 ? '🌟 Getting Bold' : '🐣 Newcomer'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}
