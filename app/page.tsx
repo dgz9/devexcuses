@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { excuses, getRandomExcuse, getDailyExcuse, getExcuseForDate, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, generateBingoCard, checkBingo, generateQuizQuestion, scenarios, getRandomExcuseForScenario, getExcusesForScenario, type Category, type Excuse, type QuizQuestion, type Scenario } from '@/lib/excuses';
+import { excuses, getRandomExcuse, getDailyExcuse, getExcuseForDate, getSpiceLabel, categories, getExcuseById, generateShareUrl, combineExcuses, getRandomComboExcuses, searchExcuses, formatForSlack, formatForStandup, getRandomMeetingExcuse, generateBingoCard, checkBingo, generateQuizQuestion, scenarios, getRandomExcuseForScenario, getExcusesForScenario, getWeeklyExcuse, getDaysUntilNextWeek, type Category, type Excuse, type QuizQuestion, type Scenario } from '@/lib/excuses';
 
 // Theme helpers
 function getTheme(): 'dark' | 'light' {
@@ -365,6 +365,9 @@ export default function Home() {
   const [animateEmoji, setAnimateEmoji] = useState(false);
   const [showDaily, setShowDaily] = useState(false);
   const [dailyExcuse] = useState<Excuse>(() => getDailyExcuse());
+  const [showWeekly, setShowWeekly] = useState(false);
+  const [weeklyExcuse] = useState<Excuse>(() => getWeeklyExcuse());
+  const [daysUntilNextWeek] = useState(() => getDaysUntilNextWeek());
   const [favorites, setFavorites] = useState<Excuse[]>([]);
   const [showFavorites, setShowFavorites] = useState(false);
   const [justFavorited, setJustFavorited] = useState(false);
@@ -831,6 +834,16 @@ export default function Home() {
               📅 {showDaily ? 'Hide Daily' : "Today's Excuse"}
             </button>
             <button
+              onClick={() => setShowWeekly(!showWeekly)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showWeekly
+                  ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 border border-blue-500/30'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+              }`}
+            >
+              📆 {showWeekly ? 'Hide Weekly' : "This Week's Excuse"}
+            </button>
+            <button
               onClick={() => setShowFavorites(!showFavorites)}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 showFavorites
@@ -1072,6 +1085,33 @@ export default function Home() {
                   <p className="text-xs text-amber-400/70 mt-2">
                     Same excuse for everyone today! Check back tomorrow for a new one.
                   </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Weekly Excuse Banner */}
+        {showWeekly && (
+          <div className="w-full max-w-2xl mb-8 excuse-enter">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 border border-blue-500/20 p-6">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-blue-500/20 text-blue-300 text-xs font-semibold rounded-bl-lg">
+                📆 WEEKLY EXCUSE
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-4xl">{weeklyExcuse.emoji}</span>
+                <div>
+                  <p className="text-lg sm:text-xl font-medium text-white">
+                    &quot;{weeklyExcuse.text}&quot;
+                  </p>
+                  <div className="flex items-center gap-3 mt-2">
+                    <p className="text-xs text-blue-400/70">
+                      Same excuse for everyone all week!
+                    </p>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">
+                      🔄 New excuse in {daysUntilNextWeek} day{daysUntilNextWeek !== 1 ? 's' : ''}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -197,6 +197,28 @@ export function getTomorrowsExcuse(): Excuse {
   return excuses[index];
 }
 
+// Weekly excuse - same excuse for everyone all week, changes on Monday
+export function getWeeklyExcuse(): Excuse {
+  const today = new Date();
+  const year = today.getFullYear();
+  // Get ISO week number
+  const d = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNum = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  // Different seed than daily to get different excuses
+  const seed = (weekNum * 47 + year * 13) % excuses.length;
+  return excuses[seed];
+}
+
+export function getDaysUntilNextWeek(): number {
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ...
+  // Days until next Monday
+  return dayOfWeek === 0 ? 1 : (8 - dayOfWeek);
+}
+
 export function getExcusesByCategory(category: Category): Excuse[] {
   return excuses.filter(e => e.category === category);
 }
